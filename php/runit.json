@@ -1,0 +1,14 @@
+{
+    "name": "php",
+    "version": "0.0.0",
+    "description": "",
+    "homepage": "",
+    "lang": "php",
+    "framework": "",
+    "runtime": "python3",
+    "start_file": "index.php",
+    "author": {
+        "name": "",
+        "website": ""
+    }
+}
