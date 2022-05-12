@@ -46,7 +46,7 @@ class RunIt:
         self.runtime = runtime
         self.author = author
         self.config = {}
-        self.start_file = STARTER_FILES[self.lang]
+        self.start_file = start_file if start_file else STARTER_FILES[self.lang]
         self.create_config()
         
         if not RunIt.has_config_file():
@@ -122,7 +122,7 @@ class RunIt:
             global EXTENSIONS
             extension = EXTENSIONS[project.lang]
             start_file = f'{page}{extension}'
-
+        
         if os.path.isfile(os.path.join(os.curdir, start_file)):
             command = check_output(f"{project.lang} {start_file}", shell=True)
             result = str(command)

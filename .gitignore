@@ -1,4 +1,7 @@
 .vscode
+/venv
+/accounts
+/php
 /__pycache__
 */__pycache__
 */*/__pycache__
