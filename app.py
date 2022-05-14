@@ -9,7 +9,7 @@ REQUESTS = []
 app = Flask(__name__)
 
 app.secret = uuid.uuid4()
-app.config['SERVER_NAME'] = 'localhost:9000'
+app.config['SERVER_NAME'] = os.getenv('RUNIT_SERVERNAME')
 
 @app.before_first_request
 def init():
