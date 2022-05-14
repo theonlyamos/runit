@@ -6,8 +6,7 @@ public = Blueprint('public', __name__)
 
 @public.before_request
 def initial():
-    print(os.path.abspath(os.curdir))
-    os.chdir("/home/void/Dev/python/runit")
+    os.chdir(os.getenv('RUNIT_HOMEDIR'))
 
 @public.route('/')
 def index():
