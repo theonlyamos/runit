@@ -24,6 +24,10 @@ def populate():
                         {'GET': request.args.to_dict(),
                         'POST': request.form.to_dict()})
 
+@app.route('/')
+def index():
+    return "Hello World"
+
 @app.route('/get_app_requests/')
 def get_parameters():
     global REQUESTS
