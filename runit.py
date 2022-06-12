@@ -3,16 +3,15 @@ import os
 import sys
 import json
 import argparse
-from subprocess import check_output
-from flask import Flask
+from flask import Flask, render_template
 from Request import Request
+from subprocess import check_output
 
 VERSION = "0.0.1"
 CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.curdir, 'templates')
-STARTER_FILES = {'python': 'app.py', 'python3': 'app.py', 'php': 
-                 'index.php','nodejs': 'index.js'}
-EXTENSIONS = {'python': '.py', 'python3': '.py', 'php': '.php', 'nodejs': '.js'}
+STARTER_FILES = {'python': 'app.py', 'php': 'index.php','nodejs': 'index.js'}
+EXTENSIONS = {'python': '.py',  'php': '.php', 'nodejs': '.js'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 is_running = False
@@ -20,11 +19,10 @@ is_running = False
 app = Flask(__name__)
 app.secret = "dasf34sfkjfldskfa9usafkj0898fsdafdsaf"
 
-
 def StartWebserver(project):
     global app
     try:
-        app.add_url_rule('/', view_func=project.serve)
+        #app.add_url_rule('/', view_func=project.serve)
         app.add_url_rule('/<page>', view_func=project.serve)
         app.run(debug=True, port=9000)
     except KeyboardInterrupt:
@@ -210,17 +208,20 @@ def get_arguments():
     global parser
     global VERSION
     
-    parser.add_argument("action", type=str, choices=['new','run'],
-                        help="Action to perform")
+    #parser.add_argument("action", type=str, choices=['new','run'],
+    #                    help="Action to perform")
+    parser.add_argument("new", action='store', help="Create new project or function")
+    parser.add_argument("run", action='store_false',
+                        help="Run current project")
     parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")
-    parser.add_argument('-v','--version', action='version', version=f'%(prog)s {VERSION}')
-    parser.add_argument('-c','--config', type=is_file, default='runit.json', 
+    parser.add_argument('-V','--version', action='version', version=f'%(prog)s {VERSION}')
+    parser.add_argument('-C','--config', type=is_file, default='runit.json', 
                         help="Configuration File, defaults to 'runit.json'")
-    parser.add_argument('-l', '--lang', type=str, choices=['python', 'python3', 'php', 'nodejs'], default='python', 
+    parser.add_argument('-L', '--lang', type=str, choices=['python', 'php', 'nodejs'], default='python', 
                         help="Language of the new project")
-    parser.add_argument('-r','--runtime', type=str, default='python3', 
-                        help="Runtime of the project language. E.g: python3, npm")
+    parser.add_argument('-R','--runtime', type=str, default='python3', 
+                        help="Runtime of the project language. E.g: python, npm")
     return parser.parse_args()
     
 if __name__ == "__main__":
@@ -229,12 +230,13 @@ if __name__ == "__main__":
         args = get_arguments()
         
         CONFIG_FILE = args.config
-        if args.action == 'run':
+        print(args)
+        if args.run:
             if CONFIG_FILE:
                 RunIt.run()
             else:
                 raise FileNotFoundError
-        elif args.action == 'new' and args.name:
+        elif args.new and args.name:
             name = RunIt.set_project_name(args.name)
             if RunIt.exists(name):
                 print(f'{name} project already Exists')

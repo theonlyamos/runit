@@ -1,0 +1,73 @@
+{% extends "account/layout.html" %}
+{% block content %}
+<div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-0">
+            <form action="{{ url_for('account.projects') }}" method="post">
+                <div class="modal-header text-bg-dark rounded-0">
+                    <h5 class="modal-title" id="projectModalLabel">New Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-2">
+                        <label for="name" class="font-weight-bold">Project Name</label>
+                        <input type="text"  name="name" class="form-control rounded-0" placeholder="Name of the project" required>
+                        <small class="text-muted font-monospace font-italic">
+                            A project is used to organize functions of similar tasks/languages into groups.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-0" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-outline-dark bg-gradient rounded-0 shadow-sm">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="container">
+    {% for (category, message) in get_flashed_messages(with_categories=True) %}
+    <div class="alert alert-{{category}} alert-dismissible bg-gradient d-flex justify-content-between rounded-0">
+        <strong>{{message}}</strong>
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% if projects %}
+
+    <div class="tools d-flex justify-content-end">
+        <a href="#projectModal" role="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal">
+            <i class="fas fa-th-large"></i>
+            New Project
+        </a>
+    </div>
+    <div class="card rounded-0 border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-light table-striped table-hover mb-0 small">
+                    <thead>
+                        <th>Name</th>
+                        <th>Updated At</th>
+                        <th>Actions</th>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td>{{ project['name'] }}</td>
+                            <td>{{ project['updated_at'] }}</td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% if not projects %}
+<a href="#projectModal" class="nav-link d-flex flex-column text-center position-absolute" style="left: 50%; top: 25%; transform: translate(-50%, 50%);" data-bs-toggle="modal" role="button" aria-controls="projectModal">
+    <i class="fas fa-th-large fa-4x p-3 border text-black-50 hover:text-dark" style="border-style: dashed !important;"></i>
+    New Project
+</a>
+{% endif %}
+{% endblock %}

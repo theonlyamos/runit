@@ -1,25 +1,65 @@
-from flask import Blueprint, request
-from runit import RunIt
-import os
+from flask import Blueprint, redirect, render_template, \
+     request, session, url_for, flash
+
+from common.security import authenticate
+from models import User
 
 public = Blueprint('public', __name__)
 
+'''
 @public.before_request
 def initial():
     os.chdir(os.getenv('RUNIT_HOMEDIR'))
+''' 
 
 @public.route('/')
 def index():
-    return 'Index Page'
+    if 'user_id' in session:
+        return redirect(url_for('account.index'))
+    return render_template('login.html')
 
-@public.route('/login', methods=['GET', 'POST'])
-def login():
-    return 'Login Page'
-
-@public.route('/register', methods=['GET', 'POST'])
+@public.route('/register/', methods=['GET', 'POST'])
 def register():
-    return 'Registration Page'
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        c_password = request.form.get('cpassword')
+        if password != c_password:
+            flash('Passwords do not match!', 'danger')
+            return render_template('register.html')
+        user = User.get_by_email(email)
+        if user:
+            flash('User is already Registered!', 'danger')
+            return render_template('register.html')
+        
+        user = User(email, name, password).save()
+        flash('Registration Successful!', 'success')
+        return redirect(url_for('public.index'))
 
+    return render_template('register.html')
+
+@public.route('/login/', methods=['POST'])
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+    
+    user = User.get_by_email(email)
+    #user = authenticate(email, password)
+    if user:
+        if authenticate(password, user.password):
+            session['user_id'] = user.id
+            session['user_name'] = user.name
+            session['user_email'] = user.email
+            return redirect(url_for('account.index'))
+        flash('Invalid Login Credentials', 'danger')
+    else:
+        flash('User does not exist', 'danger')
+    return redirect(url_for('public.index'))
+
+
+
+'''
 @public.route('/<account>/', methods=['GET','POST','PUT','PATCH','DELETE'])
 def main(account):
     if (os.path.isdir(os.path.join('accounts', account))):
@@ -36,3 +76,4 @@ def page(account, page='index'):
         return result
     else:
         return RunIt.notfound()
+'''

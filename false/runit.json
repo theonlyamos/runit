@@ -1,0 +1,14 @@
+{
+    "name": "false",
+    "version": "0.0.0",
+    "description": "",
+    "homepage": "",
+    "lang": "python",
+    "framework": "",
+    "runtime": "python3",
+    "start_file": "app.py",
+    "author": {
+        "name": "",
+        "website": ""
+    }
+}
