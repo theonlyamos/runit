@@ -14,7 +14,7 @@ STARTER_FILES = {'python': 'app.py', 'php': 'index.php','nodejs': 'index.js'}
 EXTENSIONS = {'python': '.py',  'php': '.php', 'nodejs': '.js'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
-is_running = False
+IS_RUNNING = False
 
 app = Flask(__name__)
 app.secret = "dasf34sfkjfldskfa9usafkj0898fsdafdsaf"
@@ -83,10 +83,10 @@ class RunIt:
 
     @staticmethod
     def set_project_name(name=""):
-        global is_running
+        global IS_RUNNING
         try:
-            if not is_running:
-                is_running = True
+            if not IS_RUNNING:
+                IS_RUNNING = True
             else:
                 name = str(input('Enter RunIt Name: '))
             while not name:
@@ -204,48 +204,68 @@ def is_file(string):
         return open(string, 'r+')
     return False
 
+def create_new_project(args):
+    global CONFIG_FILE
+    global CURRENT_PROJECT
+    '''
+    Method for creating new project or
+    function from command line arguments
+
+    @param args Arguments from argparse
+    @return None
+    '''
+    if args.name:
+        name = RunIt.set_project_name(args.name)
+        if RunIt.exists(name):
+            print(f'{name} project already Exists')
+            sys.exit(1)
+        
+        CONFIG_FILE = 'runit.json'
+        CURRENT_PROJECT = RunIt(name=args.name, lang=args.lang, 
+                                runtime=args.runtime)
+        print(CURRENT_PROJECT)
+    else:
+        pri
+
+def run_project(args):
+    global CONFIG_FILE
+    CONFIG_FILE = args.config
+
+    if CONFIG_FILE:
+        RunIt.run()
+    else:
+        raise FileNotFoundError
+
 def get_arguments():
     global parser
     global VERSION
     
-    #parser.add_argument("action", type=str, choices=['new','run'],
-    #                    help="Action to perform")
-    parser.add_argument("new", action='store', help="Create new project or function")
-    parser.add_argument("run", action='store_false',
-                        help="Run current project")
-    parser.add_argument("name", type=str, nargs="?", 
-                        help="Name of the new project")
-    parser.add_argument('-V','--version', action='version', version=f'%(prog)s {VERSION}')
-    parser.add_argument('-C','--config', type=is_file, default='runit.json', 
-                        help="Configuration File, defaults to 'runit.json'")
-    parser.add_argument('-L', '--lang', type=str, choices=['python', 'php', 'nodejs'], default='python', 
+    subparsers = parser.add_subparsers()
+    new_parser = subparsers.add_parser('new', help='Create new project or function')
+    new_parser.add_argument("name", type=str, nargs="?", 
+                        help="Name of the new project")          
+    new_parser.add_argument('-L', '--lang', type=str, choices=['python', 'php', 'nodejs'], default='python', 
                         help="Language of the new project")
-    parser.add_argument('-R','--runtime', type=str, default='python3', 
+    new_parser.add_argument('-R','--runtime', type=str, default='python3', 
                         help="Runtime of the project language. E.g: python, npm")
+    new_parser.set_defaults(func=create_new_project)
+    
+    run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
+    run_parser.set_defaults(func=run_project)
+    
+    parser.add_argument('-C','--config', type=is_file, default='runit.json', 
+                        help="Configuration File, defaults to 'runit.json'") 
+    parser.add_argument('-V','--version', action='version', version=f'%(prog)s {VERSION}')
     return parser.parse_args()
+
     
 if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(description="A terminal client for runit")
         args = get_arguments()
-        
-        CONFIG_FILE = args.config
-        print(args)
-        if args.run:
-            if CONFIG_FILE:
-                RunIt.run()
-            else:
-                raise FileNotFoundError
-        elif args.new and args.name:
-            name = RunIt.set_project_name(args.name)
-            if RunIt.exists(name):
-                print(f'{name} project already Exists')
-                sys.exit(1)
-            
-            CONFIG_FILE = 'runit.json'
-            CURRENT_PROJECT = RunIt(name=args.name, lang=args.lang, 
-                                    runtime=args.runtime)
-            print(CURRENT_PROJECT)
+        args.func(args)
+        #CONFIG_FILE = args.config
+        #print(args)
 
     except FileNotFoundError:
         print("Config file not found")
