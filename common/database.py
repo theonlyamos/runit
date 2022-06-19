@@ -1,6 +1,5 @@
 from flask_pymongo import PyMongo
 from flask import Flask
-from runit import app
 import os
 
 
@@ -9,7 +8,7 @@ class Database(object):
     db = None
 
     @staticmethod
-    def initialize():
+    def initialize(app):
         client = PyMongo()
         app.config['MONGO_URI'] = os.getenv('FAFMONGO', 'mongodb://localhost:27017')+'/runit'
         client.init_app(app)

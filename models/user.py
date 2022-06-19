@@ -83,6 +83,26 @@ class User():
         #return Function.get_by_user(self.id)
         return Database.db.functions.find({'user_id': ObjectId(self.id)})
 
+    def count_functions(self)-> int:
+        '''
+        Instance Method for counting User functions
+
+        @params None
+        @return int Count of functions
+        '''
+
+        return Database.db.functions.count_documents({'user_id': ObjectId(self.id)})
+
+    def count_projects(self)-> int:
+        '''
+        Instance Method for counting User Projects
+
+        @params None
+        @return int Count of Projects
+        '''
+
+        return Database.db.projects.count_documents({'user_id': ObjectId(self.id)})
+    
     def json(self)-> Dict:
         '''
         Instance Method for converting User Instance to Dict
@@ -94,8 +114,9 @@ class User():
         return {
             "_id": str(self.id),
             "name": self.name,
-            "projects": self.projects(),
-            "functions": self.functions(),
+            "email": self.email,
+            "projects": self.count_projects(),
+            "functions": self.count_functions(),
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
@@ -112,23 +133,17 @@ class User():
         return cls(**user) if user else None
 
     @classmethod
-    def get(cls, _id: str):
+    def get(cls, _id: str|None = None):
         '''
-        Class Method for retrieving user by _id
+        Class Method for retrieving function(s) by _id 
+        or all if _id is None
 
-        @param _id ID of the user in databse
-        @return User instance
+        @param _id ID of the function in database
+        @return Function instance(s)
         '''
+
+        if _id is None:
+            return [cls(**elem) for elem in Database.db.users.find({})]
+
         user = Database.db.users.find_one({"_id": ObjectId(_id)})
         return cls(**user) if user else None
-
-    @classmethod
-    def get_all(cls)-> List:
-        '''
-        Class Method for retrieving all users from database
-
-        @params None
-        @return List of User instances
-        '''
-
-        return [cls(**elem) for elem in Database.db.find("users", {})]

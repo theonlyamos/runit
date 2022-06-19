@@ -91,7 +91,7 @@ def profile():
 
 @account.route('/logout/')
 def logout():
-    del session['user']
+    del session['user_id']
     return redirect(url_for('public.index'))
 
 @account.route('/<page>')

@@ -5,4 +5,5 @@
 /__pycache__
 */__pycache__
 */*/__pycache__
+blueprints/__pycache__/
 */*/*/__pycache__

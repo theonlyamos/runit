@@ -1,10 +1,14 @@
 from flask import Flask, jsonify, session, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from flask_restful import Api
+
 from common.database import Database
+from common.apis import FunctionById, FunctionRS, Login, Account, ProjectById, ProjectRS
 
 import os
 
 app = Flask(__name__)
+api = Api(app, prefix='/api')
 
 app.secret_key = "dasf34sfkjfldfdsafjlfdsufewpodsfsdafdsaf"
 app.config['SERVER_NAME'] = os.getenv('RUNIT_SERVERNAME')
@@ -22,9 +26,10 @@ MENU = [
 @app.before_first_request
 def init():
     global MENU
+    global app
     session['menu'] = MENU
     #session.clear()
-    Database.initialize()
+    Database.initialize(app)
     if not (os.path.exists(os.path.join(os.curdir, 'accounts'))):
         os.mkdir(os.path.join(os.curdir, 'accounts'))
 
@@ -35,6 +40,13 @@ def populate():
         REQUESTS.insert(0, 
                         {'GET': request.args.to_dict(),
                         'POST': request.form.to_dict()})
+
+api.add_resource(Login, '/login/')
+api.add_resource(Account, '/account/')
+api.add_resource(ProjectRS, '/projects/')
+api.add_resource(ProjectById, '/projects/<string:project_id>/')
+api.add_resource(FunctionRS, '/functions/')
+api.add_resource(FunctionById, '/functions/<string:function_id>/')
 
 @app.route('/get_app_requests/')
 def get_parameters():

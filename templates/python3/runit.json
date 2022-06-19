@@ -1,12 +1,12 @@
 {
-    "name": "false",
+    "name": "python",
     "version": "0.0.0",
     "description": "",
     "homepage": "",
-    "lang": "python",
+    "lang": "python3",
     "framework": "",
-    "runtime": "python3",
-    "start_file": "app.py",
+    "runtime": "3",
+    "start_file": "application.py",
     "author": {
         "name": "",
         "website": ""

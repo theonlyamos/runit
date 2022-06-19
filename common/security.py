@@ -1,4 +1,3 @@
-from flask import flash
 from models import User
 from common.utils import Utils
 
@@ -6,14 +5,18 @@ from common.utils import Utils
 #def authenticate(password: str, user_password: str)-> bool:
 #    return Utils.check_hashed_password(password, user_password)
 
-def authenticate(email, password):
+def authenticate(email: str, password: str)-> User|None:
+    '''
+    Function for authenticating user
+
+    @param email Email Address
+    @param password Password
+    @return User Instance or None
+    '''
     user = User.get_by_email(email)
     if user:
         if Utils.check_hashed_password(password, user.password):
             return user
-        flash("Invalid Login", 'danger')
-    else:
-        flash("User does not exist!", 'danger')
     return None
 
 

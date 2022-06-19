@@ -39,22 +39,19 @@ def register():
 
     return render_template('register.html')
 
-@public.route('/login/', methods=['POST'])
+@public.post('/login/')
 def login():
     email = request.form.get('email')
     password = request.form.get('password')
-    
-    user = User.get_by_email(email)
-    #user = authenticate(email, password)
+
+    user = authenticate(email, password)
     if user:
-        if authenticate(password, user.password):
-            session['user_id'] = user.id
-            session['user_name'] = user.name
-            session['user_email'] = user.email
-            return redirect(url_for('account.index'))
-        flash('Invalid Login Credentials', 'danger')
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        session['user_email'] = user.email
+        return redirect(url_for('account.index'))
     else:
-        flash('User does not exist', 'danger')
+        flash('Invalid Login Credentials', 'danger')
     return redirect(url_for('public.index'))
 
 

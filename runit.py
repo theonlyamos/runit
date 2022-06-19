@@ -1,17 +1,21 @@
-#! /usr/bin/python3
+#!python3
 import os
 import sys
 import json
+import getpass
 import argparse
-from flask import Flask, render_template
-from Request import Request
+
+from flask import Flask
 from subprocess import check_output
+
+from modules.account import Account
+from languages import LanguageParser
 
 VERSION = "0.0.1"
 CURRENT_PROJECT = ""
-TEMPLATES_FOLDER = os.path.join(os.curdir, 'templates')
-STARTER_FILES = {'python': 'app.py', 'php': 'index.php','nodejs': 'index.js'}
-EXTENSIONS = {'python': '.py',  'php': '.php', 'nodejs': '.js'}
+TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
+STARTER_FILES = {'python3': 'application.py', 'php': 'index.php','nodejs': 'index.js'}
+EXTENSIONS = {'python3': '.py',  'php': '.php', 'nodejs': '.js'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
@@ -22,9 +26,9 @@ app.secret = "dasf34sfkjfldskfa9usafkj0898fsdafdsaf"
 def StartWebserver(project):
     global app
     try:
-        #app.add_url_rule('/', view_func=project.serve)
-        app.add_url_rule('/<page>', view_func=project.serve)
-        app.run(debug=True, port=9000)
+        app.add_url_rule('/', view_func=project.serve)
+        app.add_url_rule('/<func>', view_func=project.serve)
+        app.run(debug=True, port=5000)
     except KeyboardInterrupt:
         sys.exit(1)
     except Exception as e:
@@ -39,7 +43,7 @@ class RunIt:
         self.version = version
         self.description = description
         self.homepage = homepage
-        self.lang = lang
+        self.lang = lang if not lang.startswith('python') else 'python3'
         self.framework = framework
         self.runtime = runtime
         self.author = author
@@ -96,16 +100,19 @@ class RunIt:
             sys.exit(1)
 
     @classmethod
-    def run(cls):
+    def run(cls, args):
         if not RunIt.has_config_file():
             print('No runit project to run')
             sys.exit(1)
         project = cls(**RunIt.load_config())
 
-        StartWebserver(project)
+        if args.shell:
+            project.serve(args.function, args.arguments)
+        else:
+            StartWebserver(project)
     
     @classmethod
-    def start(cls, account, page='index'):
+    def start(cls, account, func='index'):
         global NOT_FOUND_FILE
 
         os.chdir(os.path.join('accounts', account))
@@ -114,12 +121,12 @@ class RunIt:
             return '404 - No project to run'
         project = cls(**RunIt.load_config())
 
-        if page == "index":
+        if func == "index":
             start_file = project.start_file
         else:
             global EXTENSIONS
             extension = EXTENSIONS[project.lang]
-            start_file = f'{page}{extension}'
+            start_file = f'{func}{extension}'
         
         if os.path.isfile(os.path.join(os.curdir, start_file)):
             command = check_output(f"{project.lang} {start_file}", shell=True)
@@ -137,14 +144,38 @@ class RunIt:
         with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
             return file.read()
     
-    def serve(self, page='index'):
+    def serve(self, func='index', args=None):
         global NOT_FOUND_FILE
-        if page == "index":
+
+        start_file = self.start_file
+
+        lang_parser = LanguageParser.detect_language(start_file)
+        lang_parser.current_func = func
+        try:
+            return getattr(lang_parser, func)(*args)
+        except AttributeError as e:
+            return f"Function with name '{func}' not defined!"
+        except TypeError as e:
+            try:
+                return getattr(lang_parser, func)()
+            except TypeError as e:
+                return str(e)
+        '''
+        if func == "index":
             start_file = self.start_file
         else:
             global EXTENSIONS
             extension = EXTENSIONS[self.lang]
-            start_file = f'{page}{extension}'
+            start_file = f'{func}{extension}'
+        
+
+        import inspect
+        sys.path.append(os.path.abspath(os.curdir))
+        module = __import__(inspect.getmodulename(start_file))
+        function = [f[1] for f in inspect.getmembers(module, inspect.isfunction) if f[0] == func]
+        if function:
+            function[0]()
+
         
         if os.path.isfile(os.path.join(os.curdir, start_file)):
             command = check_output(f"{self.lang} {start_file}", shell=True)
@@ -153,6 +184,7 @@ class RunIt:
         
         with open(os.path.join(os.curdir, NOT_FOUND_FILE),'rt') as file:
             return file.read()
+        '''
     
     def create_folder(self):
         os.mkdir(os.path.join(os.curdir, self.name))
@@ -179,7 +211,7 @@ class RunIt:
         self.config['runtime'] = self.runtime
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author
-        self.config['author']['name'] = ""
+        self.config['author']['name'] = getpass.getuser()
         self.config['author']['website'] = ""
     
     def create_starter_files(self):
@@ -195,9 +227,22 @@ class RunIt:
             with open(os.path.join(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error:
                 error.write(file.read())
         
+        '''
         with open(os.path.join(os.curdir, 'runit-cli.py'),'rt') as file:
             with open(os.path.join(os.curdir, self.name, 'runit-cli.py'), 'wt') as client:
                 client.write(file.read())
+        '''
+
+        if self.lang.startswith('python'):
+            PACKAGES_FOLDER = 'packages'
+            os.mkdir(os.path.join(os.curdir, self.name, PACKAGES_FOLDER))
+            for filename in os.listdir(os.path.abspath(os.path.join(os.curdir, TEMPLATES_FOLDER, self.lang, PACKAGES_FOLDER))):
+                if os.path.isfile(os.path.join(os.curdir, TEMPLATES_FOLDER, self.lang,
+                    PACKAGES_FOLDER, filename)):
+                    with open(os.path.join(os.curdir, TEMPLATES_FOLDER, self.lang,
+                        PACKAGES_FOLDER, filename),'rt') as file:
+                        with open(os.path.join(os.curdir, self.name, PACKAGES_FOLDER, filename), 'wt') as package:
+                            package.write(file.read())
 
 def is_file(string):
     if (os.path.isfile(os.path.join(os.curdir, string))):
@@ -225,16 +270,20 @@ def create_new_project(args):
                                 runtime=args.runtime)
         print(CURRENT_PROJECT)
     else:
-        pri
+        print('Project name not specified')
 
 def run_project(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
 
     if CONFIG_FILE:
-        RunIt.run()
+        RunIt.run(args)
     else:
         raise FileNotFoundError
+
+def print_help(args):
+    global parser
+    parser.print_help()
 
 def get_arguments():
     global parser
@@ -244,18 +293,65 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-    new_parser.add_argument('-L', '--lang', type=str, choices=['python', 'php', 'nodejs'], default='python', 
+    new_parser.add_argument('-L', '--lang', type=str, choices=['python3', 'python', 'php', 'nodejs'], default='python', 
                         help="Language of the new project")
-    new_parser.add_argument('-R','--runtime', type=str, default='python3', 
-                        help="Runtime of the project language. E.g: python, npm")
+    new_parser.add_argument('-R','--runtime', type=str,
+                        help="Runtime of the project language. E.g: python3, node")
     new_parser.set_defaults(func=create_new_project)
     
     run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
+    run_parser.add_argument('--shell', action='store_true', help='Run function only in shell')
+    run_parser.add_argument('-f', '--function', default='index', type=str, help='Function to run')
+    run_parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
     run_parser.set_defaults(func=run_project)
+
+    account_parser = subparsers.add_parser('account', help='Run command on user account')
+    user_subparser = account_parser.add_subparsers()
+
+    login_parser = user_subparser.add_parser('login', help="User account login")
+    login_parser.add_argument('--email', type=str, help="Account email address")
+    login_parser.add_argument('--password', type=str, help="Account password")
+    login_parser.set_defaults(func=Account.login)
+
+    register_parser = user_subparser.add_parser('register', help="Register new account")
+    register_parser.add_argument('--name', type=str, help="Account user's name")
+    register_parser.add_argument('--email', type=str, help="Account email address")
+    register_parser.add_argument('--password', type=str, help="Account password")
+    register_parser.set_defaults(func=Account.register)
+
+    account_parser.add_argument('-i', '--info', action='store_true', help="Print out current account info")
+    account_parser.set_defaults(func=Account.info)
     
+    projects_parser = subparsers.add_parser('projects', help='Manage projects')
+    projects_parser.add_argument('-l', '--list', action='store_true', help="List account projects")
+    projects_parser.add_argument('-i', '--id', type=str, help="Project ID")
+    projects_parser.set_defaults(func=Account.projects)
+
+    projects_subparser = projects_parser.add_subparsers()
+
+    new_project_parser = projects_subparser.add_parser('new', help="Create new Project")
+    new_project_parser.add_argument('name', type=str, help="Name of project")
+    new_project_parser.set_defaults(func=create_new_project)
+
+    update_project_parser = projects_subparser.add_parser('update', help="Update Project by Id")
+    update_project_parser.add_argument('-i', '--id', required=True, help="Id of the project to be updated")
+    update_project_parser.add_argument('-d', '--data', required=True, type=str, action='append', help='A dictionary or string. E.g: name="new name" or {"name": "new name"}')
+    update_project_parser.set_defaults(func=Account.update_project)
+
+    delete_project_parser = projects_subparser.add_parser('rm', help="Delete Project")
+    delete_project_parser.add_argument('-i', '--id', required=True, help="Id of the project to be deleted")
+    delete_project_parser.set_defaults(func=Account.delete_project)
+
+    functions_parser = subparsers.add_parser('functions', help='Manage functions')
+    functions_parser.add_argument('-l', '--list', action='store_true', help="List project functions")
+    functions_parser.add_argument('-i', '--id', type=str, help="Function ID")
+    functions_parser.add_argument('-p', '--project', type=str, help="Project ID")
+    functions_parser.set_defaults(func=Account.functions)
+
     parser.add_argument('-C','--config', type=is_file, default='runit.json', 
                         help="Configuration File, defaults to 'runit.json'") 
     parser.add_argument('-V','--version', action='version', version=f'%(prog)s {VERSION}')
+    parser.set_defaults(func=print_help)
     return parser.parse_args()
 
     
@@ -264,10 +360,7 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(description="A terminal client for runit")
         args = get_arguments()
         args.func(args)
-        #CONFIG_FILE = args.config
-        #print(args)
 
     except FileNotFoundError:
         print("Config file not found")
         #parser.print_help()
-        

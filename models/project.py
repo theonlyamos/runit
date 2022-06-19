@@ -1,4 +1,4 @@
-from typing import Callable, List, Dict
+from typing import List, Dict
 from datetime import datetime
 import uuid
 
@@ -32,7 +32,18 @@ class Project():
             "updated_at": self.updated_at
         }
 
-        Database.db.projects.insert_one(data)
+        return Database.db.projects.insert_one(data)
+    
+    def update(self, update: dict):
+        '''
+        Instance Method for updating Project instance to database
+
+        @params None
+        @return None
+        '''
+        update['updated_at'] = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S")
+        
+        return Database.db.projects.update_one({'_id': ObjectId(self.id)}, {'$set': update}, upsert=True)
 
     def user(self):#-> User:
         '''
@@ -56,6 +67,16 @@ class Project():
         #return Function.get(self.id)
         return Database.db.functions.find({'project_id': ObjectId(self.id)})
     
+    def count_functions(self)-> int:
+        '''
+        Instance Method for counting function in Project
+
+        @params None
+        @return Count of functions
+        '''
+
+        return Database.db.functions.count_documents({'project_id': ObjectId(self.id)})
+    
     def json(self)-> Dict:
         '''
         Instance Method for converting instance to Dict
@@ -66,7 +87,9 @@ class Project():
         return {
             "_id": str(self.id),
             "name": self.name,
-            "user": self.user(),
+            #"user": self.user(),
+            "user_id": str(self.user_id),
+            "functions": self.count_functions(),
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
@@ -83,22 +106,18 @@ class Project():
         return [cls(**elem) for elem in projects]
 
     @classmethod
-    def get(cls, _id: str):
+    def get(cls,  _id: str|None = None):
         '''
-        Class Method for retrieving project by _id
+        Class Method for retrieving project(s) by _id 
+        or all if _id is None
 
         @param _id ID of the project in databse
         @return Project instance
         '''
+
+        if _id is None:
+            return [cls(**elem) for elem in Database.db.projects.find({})]
+            
         project = Database.db.projects.find_one({"_id": ObjectId(_id)})
         return cls(**project) if project else None
 
-    @classmethod
-    def get_all(cls)-> List:
-        '''
-        Class Method for retrieving all projects from database
-
-        @params None
-        @return List of Project instances
-        '''
-        return [cls(**elem) for elem in Database.db.find("projects", {})]
