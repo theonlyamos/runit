@@ -10,7 +10,7 @@ import os
 app = Flask(__name__)
 api = Api(app, prefix='/api')
 
-app.secret_key = "dasf34sfkjfldfdsafjlfdsufewpodsfsdafdsaf"
+app.secret_key =  os.getenv('RUNIT_SECRET_KEY')
 app.config['SERVER_NAME'] = os.getenv('RUNIT_SERVERNAME')
 
 jwt = JWTManager(app)

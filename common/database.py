@@ -10,7 +10,7 @@ class Database(object):
     @staticmethod
     def initialize(app):
         client = PyMongo()
-        app.config['MONGO_URI'] = os.getenv('FAFMONGO', 'mongodb://localhost:27017')+'/runit'
+        app.config['MONGO_URI'] = os.getenv('RUNIT_MONGO_URI')
         client.init_app(app)
         Database.db = client.db
         #Database.DATABASE = client['runit']
