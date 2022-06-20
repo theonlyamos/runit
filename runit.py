@@ -1,11 +1,12 @@
 #!python3
+from io import TextIOWrapper
 import os
 import sys
 import json
 import getpass
 import argparse
 
-from flask import Flask
+from flask import Flask, request
 from subprocess import check_output
 
 from modules.account import Account
@@ -18,6 +19,7 @@ STARTER_FILES = {'python3': 'application.py', 'php': 'index.php','nodejs': 'inde
 EXTENSIONS = {'python3': '.py',  'php': '.php', 'nodejs': '.js'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
+STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
 
 app = Flask(__name__)
@@ -35,10 +37,11 @@ def StartWebserver(project):
         print(e)
 
 class RunIt:
-    def __init__(self, name, version="0.0.0", description="", homepage="",
+    def __init__(self, name, _id="", version="0.0.0", description="", homepage="",
     lang="", framework="", runtime="", start_file="", author={}):
         global STARTER_FILES
 
+        self._id = _id
         self.name = name
         self.version = version
         self.description = description
@@ -74,19 +77,33 @@ class RunIt:
         return True
 
     @staticmethod
-    def load_config():
+    def load_config()-> dict:
+        '''
+        Load Configuration file from
+        current directory: runit.json
+        
+        @params None
+        @return Dictionary
+        '''
         global CONFIG_FILE
-
+        
         if isinstance(CONFIG_FILE, str):
             if os.path.exists(os.path.join(os.curdir, CONFIG_FILE)):
                 with open(CONFIG_FILE, 'rt') as file:
                     return json.load(file)
-        elif not isinstance(CONFIG_FILE, bool):
+        elif isinstance(CONFIG_FILE, TextIOWrapper):
             return json.load(CONFIG_FILE)
         return {}
 
     @staticmethod
-    def set_project_name(name=""):
+    def set_project_name(name: str =None)-> str:
+        '''
+        Set Project name from argument
+        or terminal input
+        
+        @param  name
+        @return name
+        '''
         global IS_RUNNING
         try:
             if not IS_RUNNING:
@@ -112,13 +129,32 @@ class RunIt:
             StartWebserver(project)
     
     @classmethod
-    def start(cls, account, func='index'):
+    def start(cls, project_id: str, func='index'):
         global NOT_FOUND_FILE
 
-        os.chdir(os.path.join('accounts', account))
+        os.chdir(os.getenv('RUNIT_HOMEDIR')+project_id)
         
         if not RunIt.has_config_file():
-            return '404 - No project to run'
+            return RunIt.notfound()
+        
+        project = cls(**RunIt.load_config())
+
+        args = request.args
+        print(args)
+        start_file = project.start_file
+
+        lang_parser = LanguageParser.detect_language(start_file)
+        lang_parser.current_func = func
+        try:
+            return getattr(lang_parser, func)(*args)
+        except AttributeError as e:
+            return f"Function with name '{func}' not defined!"
+        except TypeError as e:
+            try:
+                return getattr(lang_parser, func)()
+            except TypeError as e:
+                return str(e)
+        '''
         project = cls(**RunIt.load_config())
 
         if func == "index":
@@ -135,9 +171,10 @@ class RunIt:
         
         with open(os.path.join(os.curdir, NOT_FOUND_FILE),'rt') as file:
             return file.read()
+        '''
     
-    @classmethod
-    def notfound(cls):
+    @staticmethod
+    def notfound():
         global TEMPLATES_FOLDER
         global NOT_FOUND_FILE
 
@@ -201,7 +238,21 @@ class RunIt:
         json.dump(self.config, config_file, indent=4)
         config_file.close()
 
+    def update_config(self):
+        global CONFIG_FILE
+        global STARTER_CONFIG_FILE
+
+        if isinstance(CONFIG_FILE, TextIOWrapper):
+            CONFIG_FILE.close()
+            CONFIG_FILE = STARTER_CONFIG_FILE
+        
+        config_file = open(CONFIG_FILE,'wt')
+
+        json.dump(self.config, config_file, indent=4)
+        config_file.close()
+
     def create_config(self):
+        self.config['_id'] = self._id
         self.config['name'] = self.name
         self.config['version'] = self.version
         self.config['description'] = self.description
@@ -246,7 +297,7 @@ class RunIt:
 
 def is_file(string):
     if (os.path.isfile(os.path.join(os.curdir, string))):
-        return open(string, 'r+')
+        return open(string, 'rt')
     return False
 
 def create_new_project(args):
@@ -280,6 +331,19 @@ def run_project(args):
         RunIt.run(args)
     else:
         raise FileNotFoundError
+
+def publish(args):
+    global CONFIG_FILE
+    CONFIG_FILE = args.config
+
+    config = RunIt.load_config()
+    #config.update({})
+    if not config:
+        raise FileNotFoundError
+    
+    project = RunIt(**config)
+    project.update_config()
+    print(project.config)
 
 def print_help(args):
     global parser
@@ -348,6 +412,8 @@ def get_arguments():
     functions_parser.add_argument('-p', '--project', type=str, help="Project ID")
     functions_parser.set_defaults(func=Account.functions)
 
+    publish_parser = subparsers.add_parser('publish', help='Create new project or function')
+    publish_parser.set_defaults(func=publish)
     parser.add_argument('-C','--config', type=is_file, default='runit.json', 
                         help="Configuration File, defaults to 'runit.json'") 
     parser.add_argument('-V','--version', action='version', version=f'%(prog)s {VERSION}')

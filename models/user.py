@@ -33,12 +33,13 @@ class User():
 
         data = {
             "name": self.name,
+            "email": self.email,
             "password": Utils.hash_password(self.password),
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
 
-        Database.db.users.insert_one(data)
+        return Database.db.users.insert_one(data)
     
     def update(self, update: Dict):
         '''

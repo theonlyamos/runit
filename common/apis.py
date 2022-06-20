@@ -105,3 +105,18 @@ class FunctionById(Resource):
             project = Project.get(function['project_id'])
             function['project'] = project.json() if project else project
         return function
+
+class RunFunction(Resource):
+    '''
+    Functions Api
+    '''
+
+    @jwt_required()
+    def get(self, function_id):
+        function = Function.get(function_id)
+
+        if function:
+            function = function.json()
+            project = Project.get(function['project_id'])
+            function['project'] = project.json() if project else project
+        return function

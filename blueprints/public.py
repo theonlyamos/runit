@@ -34,6 +34,7 @@ def register():
             return render_template('register.html')
         
         user = User(email, name, password).save()
+        print(user.inserted_id)
         flash('Registration Successful!', 'success')
         return redirect(url_for('public.index'))
 

@@ -9,9 +9,10 @@ from common.database import Database
 #from models import User
 
 class Project():
-    def __init__(self, name, user_id, created_at=None, updated_at=None, _id=None):
+    def __init__(self, name, user_id, config, created_at=None, updated_at=None, _id=None):
         self.name = name
         self.user_id = user_id
+        self.config = config
         self.created_at = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S") \
             if not created_at else created_at
         self.updated_at = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S") \
@@ -28,6 +29,7 @@ class Project():
         data = {
             "name": self.name,
             "user_id": ObjectId(self.user_id),
+            "config": self.config,
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
@@ -89,6 +91,8 @@ class Project():
             "name": self.name,
             #"user": self.user(),
             "user_id": str(self.user_id),
+            "path": self.path,
+            "config": self.config,
             "functions": self.count_functions(),
             "created_at": self.created_at,
             "updated_at": self.updated_at
