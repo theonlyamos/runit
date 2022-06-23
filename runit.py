@@ -27,7 +27,7 @@ CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
 PROJECTS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects')
-PROJECTS_API = os.getenv('RUNIT_SERVERNAME')+'api/projects/'
+
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
@@ -195,6 +195,8 @@ class RunIt:
     @staticmethod
     def extract_project(filepath):
         directory, filename = os.path.split(filepath)
+        print('[-]', directory)
+        print(os.listdir(directory))
         with ZipFile(filepath, 'r') as file:
             file.extractall(directory)
         os.unlink(filepath)
@@ -284,7 +286,7 @@ class RunIt:
                 for filename in filenames:
                     filepath = os.path.join(folderName,  filename)
                     #print(filepath)
-                    if os.path.basename(filepath) != zipname:
+                    if os.path.basename(filepath) != zipname or not filepath.startswith('./__pycache__'):
                         print(f'[{filepath}] Compressing', end='\r')
                         zipobj.write(filepath, filepath)
                         print(f'[{filepath}] Compressed!')
@@ -391,6 +393,7 @@ def publish(args):
 
     headers = {}
     headers['Authorization'] = f"Bearer {token}"
+    print(headers)
 
     config = RunIt.load_config()
     #config.update({})
@@ -405,14 +408,11 @@ def publish(args):
     #print(project.config)
 
     print('[-] Uploading file....', end='\r')
-    with open(filename, 'rb') as file:
-        files = {'file': file}
-        req = requests.post(PROJECTS_API, data=project.config, 
-                            files=files, headers=headers)
-    
+    file = open(filename, 'rb')
+    files = {'file': file}
+    result = Account.publish_project(files, project.config)
     os.unlink(filename)
-    result = req.json()
-    print(result)
+    #print(result)
     if 'msg' in result.keys():
         print(result['msg'])
         exit(1)

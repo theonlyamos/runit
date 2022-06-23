@@ -3,7 +3,8 @@ import shelve
 import requests
 from getpass import getpass
 
-BASE_URL = os.getenv('RUNIT_SERVERNAME', 'localhost:9000')+'api/'
+BASE_API = os.getenv('RUNIT_SERVERNAME')+'api/'
+PROJECTS_API = BASE_API+'projects/'
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
@@ -56,7 +57,7 @@ class Account():
                 password = getpass()
 
             data = {"email": email, "password": password}
-            url = BASE_URL + 'login/'
+            url = BASE_API + 'login/'
 
             request = requests.post(url, json=data)
 
@@ -99,7 +100,7 @@ class Account():
 
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_URL + 'account/'
+            url = BASE_API + 'account/'
 
             request = requests.get(url, headers=BASE_HEADERS)
             print(request.json())
@@ -120,7 +121,7 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_URL + 'projects/'
+            url = BASE_API + 'projects/'
 
             if not args.id is None:
                 url += f'{args.id}/'
@@ -130,6 +131,28 @@ class Account():
 
         except Exception as e:
             print(str(e))
+    
+    @staticmethod
+    def publish_project(files: dict, data: dict):
+        '''
+        Retrieve account details
+        
+        @param files 
+        @param data
+        @return requests response
+        '''
+        try:
+            global BASE_HEADERS
+            token = load_token()
+
+            BASE_HEADERS['Authorization'] = f"Bearer {token}"
+
+            req = requests.post(PROJECTS_API, data=data, 
+                        files=files, headers=BASE_HEADERS)
+            return req.json()
+
+        except Exception as e:
+            return str(e)
     
     @staticmethod
     def create_project(args):
@@ -154,7 +177,7 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_URL + f'projects/{args.id}/'
+            url = BASE_API + f'projects/{args.id}/'
 
             data = {}
             raw = args.data
@@ -181,7 +204,7 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_URL + f'projects/{args.id}/'
+            url = BASE_API + f'projects/{args.id}/'
 
             request = requests.delete(url, headers=BASE_HEADERS)
             print(request.json())
@@ -202,7 +225,7 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_URL + 'functions/'
+            url = BASE_API + 'functions/'
 
             if not args.project is None:
                 url += f'{args.project}/'
