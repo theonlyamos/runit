@@ -69,6 +69,13 @@ class ProjectRS(Resource):
         data = request.form
         file = request.files['file']
 
+        print(data)
+        print(file)
+        print(os.path.join(os.getenv('RUNIT_HOMEDIR')))
+        print(PROJECTS_DIR)
+        print(os.listdir(PROJECTS_DIR))
+
+
         result = {'status': 'success'}
         
         if not '_id' in data.keys():
