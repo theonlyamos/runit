@@ -9,6 +9,8 @@ BASE_HEADERS = {
 }
 
 def load_token(access_token: str|None = None):
+    curdir = os.curdir
+    os.chdir(os.getenv('RUNIT_HOMEDIR'))
     with shelve.open('account') as account:
         if access_token is None and 'access_token' in account.keys():
             return account['access_token']
@@ -16,7 +18,8 @@ def load_token(access_token: str|None = None):
             account['access_token'] = access_token
         else:
             account['access_token'] = ''
-        return None
+    os.chdir(curdir)
+    return None
 
 class Account():
     '''Class for managing user account'''

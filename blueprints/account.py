@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+from sys import prefix
 
 from flask import Blueprint, flash, render_template, redirect, \
     url_for, request, session
@@ -17,7 +18,7 @@ EXTENSIONS = {'python': '.py', 'python3': '.py', 'php': '.php', 'javascript': '.
 LANGUAGE_ICONS = {'python': 'python', 'python3': 'python', 'php': 'php',
                   'javascript': 'node-js', 'typescript': 'node-js'}
 
-account = Blueprint('account', __name__, static_folder=os.path.join('..','static'))
+account = Blueprint('account', __name__, url_prefix='/account', static_folder=os.path.join('..','static'))
 
 @account.before_request
 def authorize():

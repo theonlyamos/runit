@@ -1,13 +1,18 @@
 #!python3
+import inspect
 from io import TextIOWrapper
 import os
 import sys
 import json
+import shelve
 import getpass
 import argparse
+from zipfile import ZipFile
 
 from flask import Flask, request
 from subprocess import check_output
+
+import requests
 
 from modules.account import Account
 from languages import LanguageParser
@@ -21,6 +26,11 @@ NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
+PROJECTS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects')
+PROJECTS_API = 'http://'+os.getenv('RUNIT_SERVERNAME')+'/api/projects/'
+BASE_HEADERS = {
+    'Content-Type': 'application/json'
+}
 
 app = Flask(__name__)
 app.secret = "dasf34sfkjfldskfa9usafkj0898fsdafdsaf"
@@ -131,8 +141,9 @@ class RunIt:
     @classmethod
     def start(cls, project_id: str, func='index'):
         global NOT_FOUND_FILE
+        global PROJECTS_DIR
 
-        os.chdir(os.getenv('RUNIT_HOMEDIR')+project_id)
+        os.chdir(os.path.join(PROJECTS_DIR, project_id))
         
         if not RunIt.has_config_file():
             return RunIt.notfound()
@@ -146,7 +157,7 @@ class RunIt:
         lang_parser = LanguageParser.detect_language(start_file)
         lang_parser.current_func = func
         try:
-            return getattr(lang_parser, func)(*args)
+            return getattr(lang_parser, func)(**args)
         except AttributeError as e:
             return f"Function with name '{func}' not defined!"
         except TypeError as e:
@@ -180,6 +191,17 @@ class RunIt:
 
         with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
             return file.read()
+    
+    @staticmethod
+    def extract_project(filepath):
+        directory, filename = os.path.split(filepath)
+        with ZipFile(filepath, 'r') as file:
+            file.extractall(directory)
+        os.unlink(filepath)
+    
+    def get_functions(self)->list:
+        lang_parser = LanguageParser.detect_language(self.start_file)
+        return [f[0] for f in inspect.getmembers(lang_parser, inspect.isfunction)]
     
     def serve(self, func='index', args=None):
         global NOT_FOUND_FILE
@@ -247,9 +269,27 @@ class RunIt:
             CONFIG_FILE = STARTER_CONFIG_FILE
         
         config_file = open(CONFIG_FILE,'wt')
-
+        self.config['_id'] = self._id
         json.dump(self.config, config_file, indent=4)
         config_file.close()
+    
+    def compress(self):
+        import os
+        from zipfile import ZipFile
+
+        zipname = f'{self.name}.zip'
+        with ZipFile(zipname, 'w') as zipobj:
+            print('[!] Compressing Project Files...')
+            for folderName, subfolders, filenames in os.walk(os.curdir):
+                for filename in filenames:
+                    filepath = os.path.join(folderName,  filename)
+                    #print(filepath)
+                    if os.path.basename(filepath) != zipname:
+                        print(f'[{filepath}] Compressing', end='\r')
+                        zipobj.write(filepath, filepath)
+                        print(f'[{filepath}] Compressed!')
+            print(f'[!] Filename: {zipname}')
+        return zipname
 
     def create_config(self):
         self.config['_id'] = self._id
@@ -295,6 +335,16 @@ class RunIt:
                         with open(os.path.join(os.curdir, self.name, PACKAGES_FOLDER, filename), 'wt') as package:
                             package.write(file.read())
 
+def load_token(access_token: str|None = None):
+    with shelve.open('account') as account:
+        if access_token is None and 'access_token' in account.keys():
+            return account['access_token']
+        if access_token:
+            account['access_token'] = access_token
+        else:
+            account['access_token'] = ''
+        return None
+
 def is_file(string):
     if (os.path.isfile(os.path.join(os.curdir, string))):
         return open(string, 'rt')
@@ -336,14 +386,52 @@ def publish(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
 
+    global BASE_HEADERS
+    token = load_token()
+
+    headers = {}
+    headers['Authorization'] = f"Bearer {token}"
+
     config = RunIt.load_config()
     #config.update({})
     if not config:
         raise FileNotFoundError
     
     project = RunIt(**config)
-    project.update_config()
-    print(project.config)
+    #project.update_config()
+    print('[-] Preparing project for upload...')
+    filename = project.compress()
+    print('[#] Project files compressed')
+    #print(project.config)
+
+    print('[-] Uploading file....', end='\r')
+    with open(filename, 'rb') as file:
+        files = {'file': file}
+        req = requests.post(PROJECTS_API, data=project.config, 
+                            files=files, headers=headers)
+        print('[#] File Uploaded!!!')
+    os.unlink(filename)
+    result = req.json()
+
+    if 'msg' in result.keys():
+        print(result['msg'])
+        exit(1)
+    elif 'message' in result.keys():
+        print(result['message'])
+
+    if 'project_id' in result.keys():
+        project._id = result['project_id']
+        print(project._id)
+        project.update_config()
+        print('[*] Project config updated')
+
+    print('[*] Project published successfully')
+    print('[!] Access your functions with the urls below:')
+
+    for func_url in result['functions']:
+        print(f"[-] {func_url}")
+
+
 
 def print_help(args):
     global parser
@@ -369,19 +457,19 @@ def get_arguments():
     run_parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
     run_parser.set_defaults(func=run_project)
 
-    account_parser = subparsers.add_parser('account', help='Run command on user account')
-    user_subparser = account_parser.add_subparsers()
-
-    login_parser = user_subparser.add_parser('login', help="User account login")
+    login_parser = subparsers.add_parser('login', help="User account login")
     login_parser.add_argument('--email', type=str, help="Account email address")
     login_parser.add_argument('--password', type=str, help="Account password")
     login_parser.set_defaults(func=Account.login)
 
-    register_parser = user_subparser.add_parser('register', help="Register new account")
+    register_parser = subparsers.add_parser('register', help="Register new account")
     register_parser.add_argument('--name', type=str, help="Account user's name")
     register_parser.add_argument('--email', type=str, help="Account email address")
     register_parser.add_argument('--password', type=str, help="Account password")
     register_parser.set_defaults(func=Account.register)
+
+    account_parser = subparsers.add_parser('account', help='Run command on user account')
+    #user_subparser = account_parser.add_subparsers()
 
     account_parser.add_argument('-i', '--info', action='store_true', help="Print out current account info")
     account_parser.set_defaults(func=Account.info)

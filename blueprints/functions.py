@@ -1,17 +1,20 @@
-from crypt import methods
-from flask import Blueprint, request
+from flask import Blueprint, jsonify, request
+
 from models.project import Project
 from runit import RunIt
+
 import os
+
+PROJECTS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects')
 
 functions = Blueprint('functions', __name__)
 
 @functions.get('/<string:project_id>/<string:function>/')
-def run(project_id, function_name):
-    if (os.path.isdir(os.getenv('RUNIT_HOMEDIR')+project_id)):
+def run(project_id, function):
+    if (os.path.isdir(os.path.join(PROJECTS_DIR, project_id))):
         #os.chdir(project.path)
-        result = RunIt.start(project_id, function_name)
-        #os.chdir(os.path.join('..', '..'))
-        return result
+        result = RunIt.start(project_id, function)
+        os.chdir(os.getenv('RUNIT_HOMEDIR'))
+        return jsonify(result)
 
     return RunIt.notfound()

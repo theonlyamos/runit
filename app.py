@@ -1,3 +1,4 @@
+from sys import prefix
 from flask import Flask, jsonify, session, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from flask_restful import Api
@@ -33,6 +34,8 @@ def init():
     Database.initialize(app)
     if not (os.path.exists(os.path.join(os.curdir, 'accounts'))):
         os.mkdir(os.path.join(os.curdir, 'accounts'))
+    if not (os.path.exists(os.path.join(os.curdir, 'projects'))):
+        os.mkdir(os.path.join(os.curdir, 'projects'))
 
 @app.before_request
 def populate():
@@ -47,6 +50,7 @@ api.add_resource(Login, '/login/')
 api.add_resource(Account, '/account/')
 api.add_resource(ProjectRS, '/projects/')
 api.add_resource(ProjectById, '/projects/<string:project_id>/')
+#api.add_resource(RunFunction, '/<string:project_id>/<string:function>/')
 #api.add_resource(FunctionRS, '/functions/')
 #api.add_resource(FunctionById, '/functions/<string:function_id>/')
 
@@ -61,7 +65,9 @@ from blueprints import public, account, functions
 
 app.register_blueprint(public)
 app.register_blueprint(functions)
-app.register_blueprint(account, subdomain='account')
+app.register_blueprint(account)
+
+#app.register_blueprint(account, subdomain='account')
 
 if __name__ == "__main__":
     app.run(debug=True, port=9000)

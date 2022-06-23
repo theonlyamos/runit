@@ -2,13 +2,20 @@ from flask import request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, get_jwt
 
+from werkzeug.utils import secure_filename
+
 from common.database import Database
 from models.function import Function
 from models.project import Project
 from models.user import User
 from common.security import authenticate
 
+import os
 from datetime import datetime, timedelta
+
+from runit import RunIt
+
+PROJECTS_DIR = os.path.realpath(os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects'))
 
 def stringifyObjectIds(model: object, properties: list)-> object:
     for property in properties:
@@ -50,6 +57,41 @@ class ProjectRS(Resource):
         projects = [result.json() for result in results]
 
         return projects
+    
+    @jwt_required()
+    def post(self)->dict:
+        '''
+        Api for publishing project
+
+        @param project_id Project _id
+        @param function Function Name
+        '''
+        data = request.form
+        file = request.files['file']
+
+        result = {'status': 'success'}
+        
+        if not '_id' in data.keys():
+            project = Project(data['name'], get_jwt_identity(), data)
+            project_id = project.save().inserted_id
+            project_id = str(project_id)
+            result['project_id'] = project_id
+        else:
+            project_id = data['_id']
+        if not os.path.exists(os.path.join(PROJECTS_DIR, project_id)):
+            os.mkdir(os.path.join(PROJECTS_DIR, project_id))
+        filepath = os.path.join(PROJECTS_DIR, project_id, secure_filename(file.filename))
+        file.save(filepath)
+
+        RunIt.extract_project(filepath)
+        os.chdir(os.path.join(PROJECTS_DIR, project_id))
+        runit = RunIt(**RunIt.load_config())
+
+        funcs = []
+        for func in runit.get_functions():
+            funcs.append(f"http://{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/")
+        result['functions'] = funcs
+        return result
 
 class ProjectById(Resource):
     '''
@@ -112,8 +154,14 @@ class RunFunction(Resource):
     '''
 
     @jwt_required()
-    def get(self, function_id):
-        function = Function.get(function_id)
+    def get(self, project_id, function)-> dict:
+        '''Get Function Details
+        
+        @param project_id _Id of project
+        @param function Name of the function
+        @return Function Details
+        '''
+        function = Function.get(function)
 
         if function:
             function = function.json()

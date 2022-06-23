@@ -46,6 +46,7 @@ def login():
     password = request.form.get('password')
 
     user = authenticate(email, password)
+    print(user)
     if user:
         session['user_id'] = user.id
         session['user_name'] = user.name

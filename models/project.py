@@ -9,7 +9,7 @@ from common.database import Database
 #from models import User
 
 class Project():
-    def __init__(self, name, user_id, config, created_at=None, updated_at=None, _id=None):
+    def __init__(self, name, user_id, config={}, created_at=None, updated_at=None, _id=None):
         self.name = name
         self.user_id = user_id
         self.config = config
@@ -91,7 +91,6 @@ class Project():
             "name": self.name,
             #"user": self.user(),
             "user_id": str(self.user_id),
-            "path": self.path,
             "config": self.config,
             "functions": self.count_functions(),
             "created_at": self.created_at,

@@ -1,11 +1,10 @@
 #from packages import request
 
 def index():
-    print('Hello World')
+    return 'Hello World'
 
 def counter():
-    for i in range(0, 9):
-        print(i)
+    return [i for i in range(0, 9)]
 
 def printout(string):
-    print(string)
+    return string
