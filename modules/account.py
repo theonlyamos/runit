@@ -3,7 +3,7 @@ import shelve
 import requests
 from getpass import getpass
 
-BASE_URL = 'http://'+os.getenv('RUNIT_SERVERNAME', 'localhost:9000')+'/api/'
+BASE_URL = os.getenv('RUNIT_SERVERNAME', 'localhost:9000')+'api/'
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }

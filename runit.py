@@ -27,7 +27,7 @@ CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
 PROJECTS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects')
-PROJECTS_API = 'http://'+os.getenv('RUNIT_SERVERNAME')+'/api/projects/'
+PROJECTS_API = os.getenv('RUNIT_SERVERNAME')+'api/projects/'
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
@@ -409,16 +409,18 @@ def publish(args):
         files = {'file': file}
         req = requests.post(PROJECTS_API, data=project.config, 
                             files=files, headers=headers)
-        print('[#] File Uploaded!!!')
+    
     os.unlink(filename)
     result = req.json()
-
+    print(result)
     if 'msg' in result.keys():
         print(result['msg'])
         exit(1)
     elif 'message' in result.keys():
         print(result['message'])
-
+        exit(1)
+    
+    print('[#] File Uploaded!!!')
     if 'project_id' in result.keys():
         project._id = result['project_id']
         print(project._id)
