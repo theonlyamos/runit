@@ -1,30 +1,7 @@
 {% extends "account/layout.html" %}
 {% block content %}
-<div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content rounded-0">
-            <form action="{{ url_for('account.projects') }}" method="post">
-                <div class="modal-header text-bg-dark rounded-0">
-                    <h5 class="modal-title" id="projectModalLabel">New Project</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group mb-2">
-                        <label for="name" class="font-weight-bold">Project Name</label>
-                        <input type="text"  name="name" class="form-control rounded-0" placeholder="Name of the project" required>
-                        <small class="text-muted font-monospace font-italic">
-                            A project is used to organize functions of similar tasks/languages into groups.
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light rounded-0" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-outline-dark bg-gradient rounded-0 shadow-sm">Create Project</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{% include 'projects/modal.html' %}
+
 <div class="container">
     {% for (category, message) in get_flashed_messages(with_categories=True) %}
     <div class="alert alert-{{category}} alert-dismissible bg-gradient d-flex justify-content-between rounded-0">
