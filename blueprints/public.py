@@ -1,9 +1,18 @@
 from flask import Blueprint, redirect, render_template, \
-     request, session, url_for, flash
+     request, session, url_for, flash, jsonify
 
 from common.security import authenticate
 from models import User
 
+<<<<<<< HEAD
+=======
+import os
+
+from runit import RunIt
+
+PROJECTS_DIR = os.path.realpath(os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects'))
+
+>>>>>>> d163498 (publish working)
 public = Blueprint('public', __name__)
 
 '''
@@ -17,6 +26,16 @@ def index():
     if 'user_id' in session:
         return redirect(url_for('account.index'))
     return render_template('login.html')
+
+@public.get('/<string:project_id>/<string:function>/')
+def run(project_id, function):
+    if os.path.isdir(os.path.join(PROJECTS_DIR, project_id)):
+        #os.chdir(project.path)
+        result = RunIt.start(project_id, function)
+        os.chdir(os.getenv('RUNIT_HOMEDIR'))
+        return jsonify(result)
+
+    return RunIt.notfound()
 
 @public.route('/register/', methods=['GET', 'POST'])
 def register():
@@ -55,7 +74,6 @@ def login():
     else:
         flash('Invalid Login Credentials', 'danger')
     return redirect(url_for('public.index'))
-
 
 
 '''

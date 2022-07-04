@@ -35,24 +35,64 @@
         <nav>
             <div class="nav nav-tabs" id="nav-tab" role="tablist">
                 <button class="nav-link active rounded-0" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="true">
-                    <small>Home</small>
-                </button>
-                <button class="nav-link rounded-0" id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-profile" type="button" role="tab" aria-controls="nav-profile" aria-selected="false">
-                    <small>Profile</small>
+                    <small>Config</small>
                 </button>
                 <button class="nav-link rounded-0" id="nav-settings-tab" data-bs-toggle="tab" data-bs-target="#nav-settings" type="button" role="tab" aria-controls="nav-settings" aria-selected="false">
                     <small>Settings</small>
                 </button>
-                <button class="nav-link rounded-0" id="nav-console-tab" data-bs-toggle="tab" data-bs-target="#nav-console" type="button" role="tab" aria-controls="nav-console" aria-selected="false" disabled>
-                    <small>Console</small>
-                </button>
                 <button class="nav-link rounded-0" id="nav-logs-tab" data-bs-toggle="tab" data-bs-target="#nav-logs" type="button" role="tab" aria-controls="nav-loggs" aria-selected="false" disabled>
                     <small>Logs</small>
+                </button>
+                <button class="nav-link rounded-0" id="nav-console-tab" data-bs-toggle="tab" data-bs-target="#nav-console" type="button" role="tab" aria-controls="nav-console" aria-selected="false" disabled>
+                    <small>Console</small>
                 </button>
             </div>
         </nav>
         <div class="tab-content" id="nav-tabContent">
             <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab" tabindex="0">
+
+                <div class="card rounded-0 border-0 shadow-sm my-2">
+                    <div class="card-header p-0 p-2 d-flex justify-content-between aling-items-center">
+                        <small class="fw-bold"></small>
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-sm btn-primary border-0" onclick="updateEnvs()">
+                                <i class="fas fa-save fa-fw"></i> Update
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body pb-0">
+                        <div class="row">
+                        {% for key, value in project.config.items() %}
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label for="">
+                                        <small>{{key}}</small>
+                                    </label>
+                                    <input type="text" value="{{value}}" placeholder="" class="form-control form-control-sm bg-gradient text-muted" readonly>
+                                </div>
+                            </div>
+                        {% endfor %}
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label for="">
+                                        <small>created on</small>
+                                    </label>
+                                    <input type="datetime" value="{{project.created_at}}" placeholder="" class="form-control form-control-sm bg-gradient text-muted" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-2">
+                                    <label for="">
+                                        <small>modified on</small>
+                                    </label>
+                                    <input type="datetime" value="{{project.updated_at}}" placeholder="" class="form-control form-control-sm bg-gradient text-muted" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="nav-settings" role="tabpanel" aria-labelledby="nav-settings-tab" tabindex="0">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card rounded-0 border-0 shadow-sm my-2">
@@ -96,29 +136,10 @@
                     <div class="col-md-6"></div>
                 </div>
             </div>
-            <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab" tabindex="0">...</div>
-            <div class="tab-pane fade" id="nav-settings" role="tabpanel" aria-labelledby="nav-settings-tab" tabindex="0">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card rounded-0 shadow-sm">
-                            <div class="card-header p-2 d-flex justify-content-around aling-items-center">
-                                <small>Environment Variables</small>
-                                <button type="button" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                            <div class="card-body">
-
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6"></div>
-                </div>
-            </div>
+            <div class="tab-pane fade" id="nav-logs" role="tabpanel" aria-labelledby="nav-logs-tab" tabindex="0">...</div>
             <div class="tab-pane fade" id="nav-console" role="tabpanel" aria-labelledby="nav-console-tab" tabindex="0">
                 Terminal Console
             </div>
-            <div class="tab-pane fade" id="nav-logs" role="tabpanel" aria-labelledby="nav-logs-tab" tabindex="0">...</div>
         </div>
     </div>
 </div>

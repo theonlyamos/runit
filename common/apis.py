@@ -65,40 +65,37 @@ class ProjectRS(Resource):
 
         @param project_id Project _id
         @param function Function Name
+        @return Projects: dict Get all projects
         '''
-        data = request.form
-        file = request.files['file']
+        try:
+            data = request.form
+            file = request.files['file']
+            
+            result = {'status': 'success'}
+            
+            if not '_id' in data.keys() or not len(data['_id']):
+                project = Project(get_jwt_identity(), **data)
+                project_id = project.save().inserted_id
+                project_id = str(project_id)
+                result['project_id'] = project_id
+            else:
+                project_id = data['_id']
+            if not os.path.exists(os.path.join(PROJECTS_DIR, project_id)):
+                os.mkdir(os.path.join(PROJECTS_DIR, project_id))
+            filepath = os.path.join(PROJECTS_DIR, project_id, secure_filename(file.filename))
+            file.save(filepath)
 
-        print(data)
-        print(file)
-        print(os.path.join(os.getenv('RUNIT_HOMEDIR')))
-        print(PROJECTS_DIR)
-        print(os.listdir(PROJECTS_DIR))
+            RunIt.extract_project(filepath)
+            os.chdir(os.path.join(PROJECTS_DIR, project_id))
+            runit = RunIt(**RunIt.load_config())
 
-
-        result = {'status': 'success'}
-        
-        if not '_id' in data.keys():
-            project = Project(data['name'], get_jwt_identity(), data)
-            project_id = project.save().inserted_id
-            project_id = str(project_id)
-            result['project_id'] = project_id
-        else:
-            project_id = data['_id']
-        if not os.path.exists(os.path.join(PROJECTS_DIR, project_id)):
-            os.mkdir(os.path.join(PROJECTS_DIR, project_id))
-        filepath = os.path.join(PROJECTS_DIR, project_id, secure_filename(file.filename))
-        file.save(filepath)
-
-        RunIt.extract_project(filepath)
-        os.chdir(os.path.join(PROJECTS_DIR, project_id))
-        runit = RunIt(**RunIt.load_config())
-
-        funcs = []
-        for func in runit.get_functions():
-            funcs.append(f"http://{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/")
-        result['functions'] = funcs
-        return result
+            funcs = []
+            for func in runit.get_functions():
+                funcs.append(f"http://{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/")
+            result['functions'] = funcs
+            return result
+        except Exception as e:
+            return {'status': 'error', 'msg': str(e)}
 
 class ProjectById(Resource):
     '''

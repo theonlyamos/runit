@@ -1,13 +1,12 @@
 import os
 import shelve
+import sys
 import requests
 from getpass import getpass
 
-BASE_API = os.getenv('RUNIT_SERVERNAME')+'api/'
+BASE_API = 'http://'+os.getenv('RUNIT_SERVERNAME')+'/api/'
 PROJECTS_API = BASE_API+'projects/'
-BASE_HEADERS = {
-    'Content-Type': 'application/json'
-}
+BASE_HEADERS = {}
 
 def load_token(access_token: str|None = None):
     curdir = os.curdir
@@ -85,6 +84,31 @@ class Account():
             print('[Success] Logged out successfully!')
         except Exception as e:
             print(str(e))
+        
+    @staticmethod
+    def isauthenticated(args):
+        '''
+        Check if current user is authenticated
+        
+        @param args Input from argparse
+        @return None
+        '''
+        try:
+            global BASE_HEADERS
+            token = load_token()
+
+            BASE_HEADERS['Authorization'] = f"Bearer {token}"
+
+            url = BASE_API + 'account/'
+
+            request = requests.get(url, headers=BASE_HEADERS)
+            result = request.json()
+            if 'msg' in result.keys():
+                raise Exception(result['msg'])
+
+        except Exception as e:
+            print(str(e))
+            sys.exit(1)
     
     @staticmethod
     def info(args)-> dict:
@@ -103,10 +127,14 @@ class Account():
             url = BASE_API + 'account/'
 
             request = requests.get(url, headers=BASE_HEADERS)
-            print(request.json())
+            result = request.json()
+            if 'msg' in result.keys():
+                raise Exception(result['msg'])
+            print(result)
 
         except Exception as e:
             print(str(e))
+            sys.exit(1)
     
     @staticmethod
     def projects(args):
@@ -137,10 +165,11 @@ class Account():
         '''
         Retrieve account details
         
-        @param files 
-        @param data
+        @param files Zipfile of project
+        @param data Project Config
         @return requests response
         '''
+        
         try:
             global BASE_HEADERS
             token = load_token()
@@ -149,10 +178,15 @@ class Account():
 
             req = requests.post(PROJECTS_API, data=data, 
                         files=files, headers=BASE_HEADERS)
-            return req.json()
+            result = req.json()
+
+            if 'msg' in result.keys() and len(result['msg']):
+                raise Exception(f"[Error] {result['msg']}")
+            return result
 
         except Exception as e:
-            return str(e)
+            print(str(e))
+            sys.exit(1)
     
     @staticmethod
     def create_project(args):

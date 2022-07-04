@@ -9,15 +9,23 @@ from common.database import Database
 #from models import User
 
 class Project():
-    def __init__(self, name, user_id, config={}, created_at=None, updated_at=None, _id=None):
+    def __init__(self, user_id, name, version="0.0.1", description="", homepage="",
+    language="", framework="", runtime="", start_file="", author={}, created_at=None, updated_at=None, _id=None):
         self.name = name
         self.user_id = user_id
-        self.config = config
+        self.version = version
+        self.description = description
+        self.homepage = homepage
+        self.language = language
+        self.runtime = runtime
+        self.framework = framework,
+        self.start_file = start_file
+        self.author = author
         self.created_at = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S") \
             if not created_at else created_at
         self.updated_at = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S") \
             if not updated_at else updated_at
-        self.id = uuid.uuid4() if not _id else _id
+        self.id = str(uuid.uuid4()) if not _id else _id
 
     def save(self):
         '''
@@ -26,10 +34,18 @@ class Project():
         @params None
         @return None
         '''
+
         data = {
             "name": self.name,
             "user_id": ObjectId(self.user_id),
-            "config": self.config,
+            "version": self.version,
+            "description": self.description,
+            "homepage": self.homepage,
+            "language": self.language,
+            "runtime": self.runtime,
+            "framework": self.framework,
+            "start_file": self.start_file,
+            "author": self.author,
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
@@ -89,9 +105,15 @@ class Project():
         return {
             "_id": str(self.id),
             "name": self.name,
-            #"user": self.user(),
             "user_id": str(self.user_id),
-            "config": self.config,
+            "version": self.version,
+            "description": self.description,
+            "homepage": self.homepage,
+            "language": self.language,
+            "runtime": self.runtime,
+            "framework": self.framework,
+            "start_file": self.start_file,
+            "author": self.author,
             "functions": self.count_functions(),
             "created_at": self.created_at,
             "updated_at": self.updated_at
