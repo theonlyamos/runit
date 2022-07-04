@@ -4,15 +4,12 @@ from flask import Blueprint, redirect, render_template, \
 from common.security import authenticate
 from models import User
 
-<<<<<<< HEAD
-=======
 import os
 
 from runit import RunIt
 
 PROJECTS_DIR = os.path.realpath(os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects'))
 
->>>>>>> d163498 (publish working)
 public = Blueprint('public', __name__)
 
 '''

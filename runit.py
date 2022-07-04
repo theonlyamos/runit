@@ -27,11 +27,7 @@ CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
 PROJECTS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects')
-<<<<<<< HEAD
-
-=======
 CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
->>>>>>> d163498 (publish working)
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
@@ -61,11 +57,7 @@ class RunIt:
         self.version = version
         self.description = description
         self.homepage = homepage
-<<<<<<< HEAD
-        self.lang = lang if not lang.startswith('python') else 'python3'
-=======
         self.language = language
->>>>>>> d163498 (publish working)
         self.framework = framework
         self.runtime = runtime
         self.author = author
@@ -459,11 +451,7 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-<<<<<<< HEAD
-    new_parser.add_argument('-L', '--lang', type=str, choices=['python3', 'python', 'php', 'nodejs'], default='python', 
-=======
     new_parser.add_argument('-L', '--language', type=str, choices=['python', 'php', 'nodejs'], default='python', 
->>>>>>> d163498 (publish working)
                         help="Language of the new project")
     new_parser.add_argument('-R','--runtime', type=str,
                         help="Runtime of the project language. E.g: python3, node")
