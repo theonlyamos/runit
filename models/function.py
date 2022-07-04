@@ -124,7 +124,7 @@ class Function():
         return [cls(**elem) for elem in functions]
 
     @classmethod
-    def get(cls, _id: str|None = None):
+    def get(cls, _id = None):
         '''
         Class Method for retrieving function(s) by _id 
         or all if _id is None

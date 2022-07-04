@@ -5,7 +5,7 @@ from common.utils import Utils
 #def authenticate(password: str, user_password: str)-> bool:
 #    return Utils.check_hashed_password(password, user_password)
 
-def authenticate(email: str, password: str)-> User|None:
+def authenticate(email: str, password: str):
     '''
     Function for authenticating user
 

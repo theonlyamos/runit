@@ -131,7 +131,7 @@ class Project():
         return [cls(**elem) for elem in projects]
 
     @classmethod
-    def get(cls,  _id: str|None = None):
+    def get(cls,  _id = None):
         '''
         Class Method for retrieving project(s) by _id 
         or all if _id is None

@@ -339,7 +339,7 @@ class RunIt:
                         with open(os.path.join(os.curdir, self.name, PACKAGES_FOLDER, filename), 'wt') as package:
                             package.write(file.read())
 
-def load_token(access_token: str|None = None):
+def load_token(access_token = None):
     with shelve.open('account') as account:
         if access_token is None and 'access_token' in account.keys():
             return account['access_token']

@@ -8,7 +8,7 @@ BASE_API = os.getenv('RUNIT_PROTOCOL')+os.getenv('RUNIT_SERVERNAME')+'/api/'
 PROJECTS_API = BASE_API+'projects/'
 BASE_HEADERS = {}
 
-def load_token(access_token: str|None = None):
+def load_token(access_token: None):
     curdir = os.curdir
     os.chdir(os.getenv('RUNIT_HOMEDIR'))
     with shelve.open('account') as account:
