@@ -1,4 +1,3 @@
-from sys import prefix
 from flask import Flask, jsonify, session, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from flask_restful import Api
@@ -8,6 +7,7 @@ from common.apis import FunctionById, FunctionRS, Login, \
     Account, ProjectById, ProjectRS, RunFunction
 
 import os
+import logging
 
 app = Flask(__name__)
 api = Api(app, prefix='/api')
@@ -16,6 +16,11 @@ app.secret_key =  os.getenv('RUNIT_SECRET_KEY')
 app.config['SERVER_NAME'] = os.getenv('RUNIT_SERVERNAME')
 
 jwt = JWTManager(app)
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
 REQUESTS = []
 MENU = [
