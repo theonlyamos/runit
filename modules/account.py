@@ -4,7 +4,7 @@ import sys
 import requests
 from getpass import getpass
 
-BASE_API = 'http://'+os.getenv('RUNIT_SERVERNAME')+'/api/'
+BASE_API = os.getenv('RUNIT_PROTOCOL')+os.getenv('RUNIT_SERVERNAME')+'/api/'
 PROJECTS_API = BASE_API+'projects/'
 BASE_HEADERS = {}
 
