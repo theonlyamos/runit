@@ -281,6 +281,7 @@ class RunIt:
         os.chdir(CURRENT_PROJECT_DIR)
 
         zipname = f'{self.name}.zip'
+        exclude_list = [zipname, 'account.db']
         with ZipFile(zipname, 'w') as zipobj:
             print('[!] Compressing Project Files...')
             for folderName, subfolders, filenames in os.walk(os.curdir):
@@ -288,7 +289,7 @@ class RunIt:
                     filepath = os.path.join(folderName,  filename)
                     #print(filepath)
                     print(os.path.basename(filepath), zipname, os.path.basename(filepath) != zipname)
-                    if os.path.basename(filepath) != zipname or os.path.basename(filepath) != 'account.db':
+                    if not os.path.basename(filepath) in exclude_list:
                         print(f'[{filepath}] Compressing', end='\r')
                         zipobj.write(filepath, filepath)
                         print(f'[{filepath}] Compressed!')
@@ -307,7 +308,7 @@ class RunIt:
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author
         self.config['author']['name'] = getpass.getuser()
-        self.config['author']['website'] = "https://author.com/"
+        self.config['author']['email'] = "name@example.com"
     
     def create_starter_files(self):
         global TEMPLATES_FOLDER
@@ -395,17 +396,19 @@ def publish(args):
 
     headers = {}
     headers['Authorization'] = f"Bearer {token}"
+    
 
+    Account.isauthenticated({})
+    user = Account.user()
+    
     config = RunIt.load_config()
+    config['author']['name'] = user['name']
+    config['author']['email'] = user['email']
     #config.update({})
     if not config:
         raise FileNotFoundError
     
-    Account.isauthenticated({})
-    user = Account.user()
     project = RunIt(**config)
-    project.author['name'] = user.name
-    project.author['email'] = user.email
     project.update_config()
     print('[-] Preparing project for upload...')
     filename = project.compress()
