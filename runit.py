@@ -154,13 +154,16 @@ class RunIt:
         project = cls(**RunIt.load_config())
 
         args = request.args
+        args_list = []
+        for key, value in args.items():
+            args_list.append(value)
         
         start_file = project.start_file
 
         lang_parser = LanguageParser.detect_language(start_file)
         lang_parser.current_func = func
         try:
-            return getattr(lang_parser, func)(**args)
+            return getattr(lang_parser, func)(*args_list)
         except AttributeError as e:
             return f"Function with name '{func}' not defined!"
         except TypeError as e:

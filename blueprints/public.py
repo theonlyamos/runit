@@ -29,7 +29,6 @@ def index():
 @public.get('/<string:project_id>/')
 def project(project_id):
     if os.path.isdir(os.path.join(PROJECTS_DIR, project_id)):
-        #os.chdir(project.path)
         result = RunIt.start(project_id, 'index')
         os.chdir(os.getenv('RUNIT_HOMEDIR'))
         return jsonify(result)
@@ -39,7 +38,6 @@ def project(project_id):
 @public.get('/<string:project_id>/<string:function>/')
 def run(project_id, function):
     if os.path.isdir(os.path.join(PROJECTS_DIR, project_id)):
-        #os.chdir(project.path)
         result = RunIt.start(project_id, function)
         os.chdir(os.getenv('RUNIT_HOMEDIR'))
         return jsonify(result)
