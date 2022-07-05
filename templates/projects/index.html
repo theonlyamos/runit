@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'modals/confirm.html' %}
 {% include 'projects/modal.html' %}
 <div class="container">
     {% for (category, message) in get_flashed_messages(with_categories=True) %}
@@ -16,40 +17,29 @@
     {% if projects %}
 
     <div class="tools d-flex justify-content-end">
-        <a href="#projectModal" role="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal">
-            <i class="fas fa-th-large"></i>
-            New Project
-        </a>
-    </div>
-    <div class="card rounded-0 border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-light table-striped table-hover mb-0 small">
-                    <thead>
-                        <th>Name</th>
-                        <th>Updated At</th>
-                        <th>Actions</th>
-                    </thead>
-                    <tbody>
-                        {% for project in projects %}
-                        <tr>
-                            <td>
-                                <input type="checkbox" class="form-check-input">
-                            </td>
-                            <td>
-                                <a href="{{url_for('project.details', project_id=project.id)}}" class="nav-link p-0">
-                                    {{ project['name'] }}
-                                </a>
-                            </td>
-                            <td>{{ project['updated_at'] }}</td>
-                            <td></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="btn-group" role="group" aria-label="tool buttons">
+            <a href="{{url_for('project.index')}}" class="btn btn-sm btn-{{'' if view != 'list' else 'outline-'}}dark" role="button" title="Grid view">
+                <small><i class="fas fa-th-large fa-fw"></i></small>
+            </a>
+            <a href="{{url_for('project.index')}}?view=list" class="btn btn-sm btn-{{'' if view == 'list' else 'outline-'}}dark" role="button" title="Table view">
+                <small><i class="fas fa-th-list fa-fw"></i></small>
+            </a>
+            <a href="#confirmModal" role="button" class="btn btn-sm btn-danger" data-bs-toggle="modal">
+                <small><i class="fas fa-trash-alt fa-fw"></i></small>
+            </a>
+            <a href="#projectModal" role="button" class="btn btn-sm btn-primary" data-bs-toggle="modal">
+               <small>
+                <i class="fas fa-plus fa-fw"></i>
+                New Project
+               </small>
+            </a>
         </div>
     </div>
+    {% if view == 'list' %} 
+    {% include 'projects/list.html' %} 
+    {% else %} 
+    {% include 'projects/grid.html' %}
+    {% endif %}
 </div>
 {% endif %}
 {% if not projects %}

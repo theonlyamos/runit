@@ -4,7 +4,12 @@
 {% endblock %}
 
 {% block pagetitle %}
-{{ super() }} / {{ project.name}}
+<div class="d-flex align-items center">
+    <a href="{{url_for('project.index')}}" class="nav-link p-0 text-black-50 hover:text-dark">
+        <i class="fas fa-arrow-left fa-fw"></i> {{ super() }}</a>
+    / 
+    <span>{{ project.name | upper}}</span>
+</div>
 {% endblock %}
 
 {% block content %}

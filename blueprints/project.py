@@ -35,7 +35,7 @@ def index():
     view = view if view else 'grid'
     projects = Project.get_by_user(user_id)
     return render_template('projects/index.html', page='projects',\
-            projects=projects, view=view)
+            projects=projects, view=view, icons=LANGUAGE_ICONS)
 
 @project.get('/<project_id>/')
 def details(project_id):
