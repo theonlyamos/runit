@@ -80,6 +80,9 @@ class ProjectRS(Resource):
                 project = Project(user.id, **data)
                 project_id = project.save().inserted_id
                 project_id = str(project_id)
+                project.id = project_id
+                homepage = f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/{project_id}/"
+                project.update({'homepage': homepage})
                 result['project_id'] = project_id
             else:
                 project_id = data['_id']
@@ -90,12 +93,16 @@ class ProjectRS(Resource):
 
             RunIt.extract_project(filepath)
             os.chdir(os.path.join(PROJECTS_DIR, project_id))
+            #os.unlink(secure_filename(file.filename))
             runit = RunIt(**RunIt.load_config())
+            runit._id = project_id
+            runit.update_config()
 
             funcs = []
             for func in runit.get_functions():
                 funcs.append(f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/")
             result['functions'] = funcs
+            result['homepage'] = f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/{project_id}/"
             return result
         except Exception as e:
             return {'status': 'error', 'msg': str(e)}

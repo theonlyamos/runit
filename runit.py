@@ -17,11 +17,13 @@ from dotenv import load_dotenv
 from modules.account import Account
 from languages import LanguageParser
 
+load_dotenv()
+
 VERSION = "0.0.1"
 CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
-STARTER_FILES = {'python3': 'application.py', 'php': 'index.php','nodejs': 'index.js'}
-EXTENSIONS = {'python3': '.py',  'php': '.php', 'nodejs': '.js'}
+STARTER_FILES = {'python': 'application.py', 'php': 'index.php','nodejs': 'index.js'}
+EXTENSIONS = {'python': '.py',  'php': '.php', 'nodejs': '.js'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
@@ -31,8 +33,6 @@ CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
-
-load_dotenv()
 
 app = Flask(__name__)
 app.secret = os.getenv('RUNIT_SECRET_KEY')
@@ -273,13 +273,19 @@ class RunIt:
         
         config_file = open(CONFIG_FILE,'wt')
         self.config['_id'] = self._id
+        self.config['name'] = self.name
+        self.config['version'] = self.version
+        self.config['description'] = self.description
+        self.config['homepage'] = self.homepage
+        self.config['language'] = self.language
+        self.config['framework'] = self.framework
+        self.config['runtime'] = self.runtime
+        self.config['start_file'] = self.start_file
+        self.config['author'] = self.author
         json.dump(self.config, config_file, indent=4)
         config_file.close()
     
     def compress(self):
-        import os
-        from zipfile import ZipFile
-
         os.chdir(CURRENT_PROJECT_DIR)
 
         zipname = f'{self.name}.zip'
@@ -309,8 +315,6 @@ class RunIt:
         self.config['runtime'] = self.runtime
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author
-        self.config['author']['name'] = getpass.getuser()
-        self.config['author']['email'] = "name@example.com"
     
     def create_starter_files(self):
         global TEMPLATES_FOLDER
@@ -367,6 +371,7 @@ def create_new_project(args):
     @param args Arguments from argparse
     @return None
     '''
+    
     if args.name:
         name = RunIt.set_project_name(args.name)
         if RunIt.exists(name):
@@ -374,8 +379,21 @@ def create_new_project(args):
             sys.exit(1)
         
         CONFIG_FILE = 'runit.json'
-        CURRENT_PROJECT = RunIt(name=args.name, language=args.language, 
-                                runtime=args.runtime)
+        config = {}
+        config['name'] = args.name
+        config['language'] = args.language
+        config['runtime'] = args.runtime
+        config['author'] = {}
+        config['author']['name'] = getpass.getuser()
+        config['author']['email'] = "name@example.com"
+        
+        user = Account.user()
+        os.chdir(CURRENT_PROJECT_DIR)
+        if user is not None:
+            config['author']['name'] = user['name']
+            config['author']['email'] = user['email']
+        
+        CURRENT_PROJECT = RunIt(**config)
         print(CURRENT_PROJECT)
     else:
         print('Project name not specified')
@@ -398,19 +416,21 @@ def publish(args):
 
     headers = {}
     headers['Authorization'] = f"Bearer {token}"
-    
 
     Account.isauthenticated({})
     user = Account.user()
-    
+
+    os.chdir(CURRENT_PROJECT_DIR)
+
     config = RunIt.load_config()
-    config['author']['name'] = user['name']
-    config['author']['email'] = user['email']
-    #config.update({})
     if not config:
         raise FileNotFoundError
     
     project = RunIt(**config)
+    if user:
+        project.author['name'] = user['name']
+        project.author['email'] = user['email']
+
     project.update_config()
     print('[-] Preparing project for upload...')
     filename = project.compress()
@@ -432,18 +452,19 @@ def publish(args):
         print(result['message'])
         exit(1)
     
-    print('[#] File Uploaded!!!')
+    print('[#] Files Uploaded!!!')
     if 'project_id' in result.keys():
         project._id = result['project_id']
+        project.homepage = result['homepage']
         project.update_config()
         print('[*] Project config updated')
 
     print('[*] Project published successfully')
     print('[!] Access your functions with the urls below:')
 
+    print(f"[-] {result['homepage']}")
     for func_url in result['functions']:
         print(f"[-] {func_url}")
-
 
 
 def print_help(args):
@@ -461,7 +482,7 @@ def get_arguments():
     new_parser.add_argument('-L', '--language', type=str, choices=['python', 'php', 'nodejs'], default='python', 
                         help="Language of the new project")
     new_parser.add_argument('-R','--runtime', type=str,
-                        help="Runtime of the project language. E.g: python3, node")
+                        help="Runtime of the project language. E.g: python3.10, node")
     new_parser.set_defaults(func=create_new_project)
     
     run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
