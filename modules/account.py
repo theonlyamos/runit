@@ -111,7 +111,33 @@ class Account():
             sys.exit(1)
     
     @staticmethod
-    def info(args)-> dict:
+    def user()-> dict:
+        '''
+        Retrieve account details
+        
+        @param args Input from argparse
+        @return None
+        '''
+        try:
+            global BASE_HEADERS
+            token = load_token()
+
+            BASE_HEADERS['Authorization'] = f"Bearer {token}"
+
+            url = BASE_API + 'account/'
+
+            request = requests.get(url, headers=BASE_HEADERS)
+            result = request.json()
+            if 'msg' in result.keys():
+                raise Exception(result['msg'])
+            return result
+
+        except Exception as e:
+            print(str(e))
+            return None
+  
+    @staticmethod
+    def info(args):
         '''
         Retrieve account details
         

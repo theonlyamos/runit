@@ -72,9 +72,10 @@ class ProjectRS(Resource):
             file = request.files['file']
             
             result = {'status': 'success'}
-            
+            user = User.get(get_jwt_identity())
+
             if not '_id' in data.keys() or not len(data['_id']):
-                project = Project(get_jwt_identity(), **data)
+                project = Project(user.id, **data)
                 project_id = project.save().inserted_id
                 project_id = str(project_id)
                 result['project_id'] = project_id

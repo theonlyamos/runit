@@ -288,7 +288,7 @@ class RunIt:
                     filepath = os.path.join(folderName,  filename)
                     #print(filepath)
                     print(os.path.basename(filepath), zipname, os.path.basename(filepath) != zipname)
-                    if os.path.basename(filepath) != zipname:
+                    if os.path.basename(filepath) != zipname or os.path.basename(filepath) != 'account.db':
                         print(f'[{filepath}] Compressing', end='\r')
                         zipobj.write(filepath, filepath)
                         print(f'[{filepath}] Compressed!')
@@ -402,8 +402,11 @@ def publish(args):
         raise FileNotFoundError
     
     Account.isauthenticated({})
+    user = Account.user()
     project = RunIt(**config)
-    #project.update_config()
+    project.author['name'] = user.name
+    project.author['email'] = user.email
+    project.update_config()
     print('[-] Preparing project for upload...')
     filename = project.compress()
     print('[#] Project files compressed')
@@ -427,7 +430,6 @@ def publish(args):
     print('[#] File Uploaded!!!')
     if 'project_id' in result.keys():
         project._id = result['project_id']
-        print(project._id)
         project.update_config()
         print('[*] Project config updated')
 
