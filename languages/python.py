@@ -19,3 +19,6 @@ class Python(object):
 
         for func in functions:
             setattr(self, func[0], func[1])
+    
+    def list_functions(self):
+        return [f[0] for f in inspect.getmembers(self, inspect.isfunction)]

@@ -52,6 +52,9 @@ class PHP(object):
 
         for key in self.functions.keys():
             self.__setattr__(key, self.anon_function)
+    
+    def list_functions(self):
+        return [func for func in self.functions.keys()]
 
     def anon_function(self, *args):
         func = self.functions[self.current_func]

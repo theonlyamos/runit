@@ -205,7 +205,7 @@ class RunIt:
     
     def get_functions(self)->list:
         lang_parser = LanguageParser.detect_language(self.start_file)
-        return [f[0] for f in inspect.getmembers(lang_parser, inspect.isfunction)]
+        return lang_parser.list_functions()
     
     def serve(self, func='index', args=None):
         global NOT_FOUND_FILE
@@ -467,6 +467,14 @@ def publish(args):
         print(f"[-] {func_url}")
 
 
+def get_functions(args):
+    config = RunIt.load_config()
+    if not config:
+        raise FileNotFoundError
+    
+    project = RunIt(**config)
+    print(project.get_functions())
+
 def print_help(args):
     global parser
     parser.print_help()
@@ -532,7 +540,7 @@ def get_arguments():
     functions_parser.add_argument('-L', '--list', action='store_true', help="List project functions")
     functions_parser.add_argument('--id', type=str, help="Function ID")
     functions_parser.add_argument('-P', '--project', type=str, help="Project ID")
-    functions_parser.set_defaults(func=Account.functions)
+    functions_parser.set_defaults(func=get_functions)
 
     publish_parser = subparsers.add_parser('publish', help='Create new project or function')
     publish_parser.set_defaults(func=publish)
