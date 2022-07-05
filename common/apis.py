@@ -91,7 +91,7 @@ class ProjectRS(Resource):
 
             funcs = []
             for func in runit.get_functions():
-                funcs.append(f"http://{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/")
+                funcs.append(f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/")
             result['functions'] = funcs
             return result
         except Exception as e:
