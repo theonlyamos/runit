@@ -1,6 +1,8 @@
 .gitignore
 .vscode
 .env
+.env.production
+.env.staging
 .flaskenv
 account.db
 /venv
