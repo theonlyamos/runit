@@ -1,11 +1,13 @@
-from datetime import datetime
+
 import os
 import sys
 from time import sleep
+from datetime import datetime
 
 from flask import Blueprint, flash, render_template, redirect, \
     url_for, request, session
 from bson.objectid import ObjectId
+from dotenv import load_dotenv, dotenv_values, set_key
 
 from models import Project
 from models import User
@@ -13,9 +15,11 @@ from models import User
 
 from runit import RunIt
 
-EXTENSIONS = {'python': '.py', 'python3': '.py', 'php': '.php', 'javascript': '.js'}
-LANGUAGE_ICONS = {'python': 'python', 'python3': 'python', 'php': 'php',
+load_dotenv()
+EXTENSIONS = {'python': '.py', 'php': '.php', 'javascript': '.js'}
+LANGUAGE_ICONS = {'python': 'python', 'php': 'php',
                   'javascript': 'node-js', 'typescript': 'node-js'}
+PROJECTS_DIR = os.path.realpath(os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects'))
 
 project = Blueprint('project', __name__, url_prefix='/projects', static_folder=os.path.join('..','static'))
 
@@ -27,21 +31,57 @@ def authorize():
 @project.get('/')
 def index():
     user_id = session['user_id']
+    view = request.args.get('view')
+    view = view if view else 'grid'
     projects = Project.get_by_user(user_id)
     return render_template('projects/index.html', page='projects',\
-            projects=projects)
+            projects=projects, view=view)
+
+@project.get('/<project_id>/')
+def details(project_id):
+    user_id = session['user_id']
+    if not os.path.isfile(os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env'))):
+        file = open(os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env')), 'w')
+        file.close()
+
+    environs = dotenv_values(os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env')))
+
+    project = Project.get(project_id)
+    if project:
+        return render_template('projects/details.html', page='projects',\
+            project=project.json(), environs=environs)
+    else:
+        flash('Project does not exist', 'danger')
+        return redirect(url_for('project.index'))
+
+@project.post('/<project_id>/')
+def environ(project_id):
+    env_file = os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env'))
+    file = open(env_file, 'w')
+    file.close()
+    
+    for key, value in request.form.items():
+        set_key(env_file, key, value)
+
+    project = Project.get(project_id)
+    flash('Environment variables updated successfully', category='success')
+    return redirect(url_for('project.details', project_id=project_id))
 
 @project.post('/')
 def new_project():
     user_id = session['user_id']
     name = request.form.get('name')
     date = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S")
+    project_id=None
     if name:
-        Project(name, user_id).save()
+        project_id = Project(name, user_id).save()
         flash('Project created successfully', category='success')
     else:
         flash('Name of the project is required', category='danger')
-    return redirect(url_for('project.projects'))
+    if project_id:
+        return redirect(url_for('project.details', project_id=project_id))
+    else:
+        return redirect(url_for('project.new_project'))
 
 @project.patch('/')
 def update_project():

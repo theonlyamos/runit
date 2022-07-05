@@ -13,7 +13,7 @@ heet">
 ylesheet">
     <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:300,300i,400,400i,700,700i" rel="stylesheet">
 
-    <title>Home - Runit</title>
+    <title>{% block title %}Runit{% endblock %}</title>
     <meta name='viewport'
         content='width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no' />
     <meta name="description" content="">
@@ -108,7 +108,11 @@ ylesheet">
                                             <i class="fas fa-bars fa-2x fa-fw"></i>
                                         </a>
                                         <div class="h5">
-                                            <strong>{{ page | upper }}</strong>
+                                            <strong>
+                                                {% block pagetitle %}
+                                                {{ page | upper }}
+                                                {% endblock %}
+                                            </strong>
                                         </div>
                                     </nav>
                                     {% block content %}
@@ -121,6 +125,8 @@ ylesheet">
             </div>
         </div>
     </main>
+    {% block scripts %}
     <script src="{{url_for('static', filename='js/bootstrap.min.js')}}"></script>
+    {% endblock %}
 </body>
 </html>

@@ -11,10 +11,12 @@ from models.user import User
 from common.security import authenticate
 
 import os
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
 from runit import RunIt
 
+load_dotenv()
 PROJECTS_DIR = os.path.realpath(os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects'))
 
 def stringifyObjectIds(model: object, properties: list)-> object:

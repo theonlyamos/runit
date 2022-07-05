@@ -1,9 +1,12 @@
 import os
-import shelve
 import sys
-import requests
+import shelve
 from getpass import getpass
 
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 BASE_API = os.getenv('RUNIT_PROTOCOL')+os.getenv('RUNIT_SERVERNAME')+'/api/'
 PROJECTS_API = BASE_API+'projects/'
 BASE_HEADERS = {}

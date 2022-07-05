@@ -1,10 +1,13 @@
 from flask_pymongo import PyMongo
 from flask import Flask
+
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Database(object):
-    #URI = os.getenv('FAFMONGO')
     db = None
 
     @staticmethod

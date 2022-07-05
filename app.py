@@ -1,3 +1,5 @@
+#! python3
+
 from flask import Flask, jsonify, session, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from flask_restful import Api
@@ -8,10 +10,12 @@ from common.apis import FunctionById, FunctionRS, Login, \
 
 import os
 import logging
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 api = Api(app, prefix='/api')
 
+load_dotenv()
 app.secret_key =  os.getenv('RUNIT_SECRET_KEY')
 app.config['SERVER_NAME'] = os.getenv('RUNIT_SERVERNAME')
 
@@ -25,7 +29,7 @@ if __name__ != '__main__':
 REQUESTS = []
 MENU = [
     {'name': 'home', 'icon': 'home', 'url': 'account.index'},
-    {'name': 'projects', 'icon': 'th-large', 'url': 'account.projects'},
+    {'name': 'projects', 'icon': 'th-large', 'url': 'project.index'},
     {'name': 'functions', 'icon': 'terminal', 'url': 'account.functions'},
     {'name': 'profile', 'icon': 'user', 'url': 'account.profile'}
 ]
@@ -66,11 +70,12 @@ def get_parameters():
         return jsonify(REQUESTS.pop())
     return jsonify({'GET': {}, 'POST': {}})
 
-from blueprints import public, account, functions
+from blueprints import public, account, functions, project
 
 app.register_blueprint(public)
 app.register_blueprint(functions)
 app.register_blueprint(account)
+app.register_blueprint(project)
 
 #app.register_blueprint(account, subdomain='account')
 

@@ -1,7 +1,11 @@
 {% extends "account/layout.html" %}
+
+{% block title %}
+{{super()}} | {{page | capitalize}}
+{% endblock %}
+
 {% block content %}
 {% include 'projects/modal.html' %}
-
 <div class="container">
     {% for (category, message) in get_flashed_messages(with_categories=True) %}
     <div class="alert alert-{{category}} alert-dismissible bg-gradient d-flex justify-content-between rounded-0">
@@ -29,7 +33,14 @@
                     <tbody>
                         {% for project in projects %}
                         <tr>
-                            <td>{{ project['name'] }}</td>
+                            <td>
+                                <input type="checkbox" class="form-check-input">
+                            </td>
+                            <td>
+                                <a href="{{url_for('project.details', project_id=project.id)}}" class="nav-link p-0">
+                                    {{ project['name'] }}
+                                </a>
+                            </td>
                             <td>{{ project['updated_at'] }}</td>
                             <td></td>
                         </tr>

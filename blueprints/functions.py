@@ -4,7 +4,9 @@ from models.project import Project
 from runit import RunIt
 
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 PROJECTS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects')
 
 functions = Blueprint('functions', __name__)

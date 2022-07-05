@@ -5,9 +5,11 @@ from common.security import authenticate
 from models import User
 
 import os
+from dotenv import load_dotenv
 
 from runit import RunIt
 
+load_dotenv()
 PROJECTS_DIR = os.path.realpath(os.path.join(os.getenv('RUNIT_HOMEDIR'), 'projects'))
 
 public = Blueprint('public', __name__)
@@ -62,7 +64,6 @@ def login():
     password = request.form.get('password')
 
     user = authenticate(email, password)
-    print(user)
     if user:
         session['user_id'] = user.id
         session['user_name'] = user.name

@@ -1,18 +1,18 @@
 #!python3
-import inspect
-from io import TextIOWrapper
+
 import os
 import sys
 import json
 import shelve
+import inspect
 import getpass
 import argparse
+from io import TextIOWrapper
+
 from zipfile import ZipFile
-
 from flask import Flask, request
-from subprocess import check_output
+from dotenv import load_dotenv
 
-import requests
 
 from modules.account import Account
 from languages import LanguageParser
@@ -32,8 +32,10 @@ BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
 
+load_dotenv()
+
 app = Flask(__name__)
-app.secret = "dasf34sfkjfldskfa9usafkj0898fsdafdsaf"
+app.secret = os.getenv('RUNIT_SECRET_KEY')
 
 def StartWebserver(project):
     global app

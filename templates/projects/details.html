@@ -1,6 +1,6 @@
 {% extends "account/layout.html" %}
-{% block head %} 
-{{super()}}
+{% block title %} 
+{{super()}} | {{page | capitalize}} | {{project.name}}
 {% endblock %}
 
 {% block pagetitle %}
@@ -62,7 +62,7 @@
                     </div>
                     <div class="card-body pb-0">
                         <div class="row">
-                        {% for key, value in project.config.items() %}
+                        {% for key, value in project.items() %}
                             <div class="col-md-4">
                                 <div class="form-group mb-2">
                                     <label for="">
@@ -72,22 +72,6 @@
                                 </div>
                             </div>
                         {% endfor %}
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label for="">
-                                        <small>created on</small>
-                                    </label>
-                                    <input type="datetime" value="{{project.created_at}}" placeholder="" class="form-control form-control-sm bg-gradient text-muted" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label for="">
-                                        <small>modified on</small>
-                                    </label>
-                                    <input type="datetime" value="{{project.updated_at}}" placeholder="" class="form-control form-control-sm bg-gradient text-muted" readonly>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -108,7 +92,7 @@
                                 </div>
                             </div>
                             <div class="card-body pb-0">
-                                <form action="{{url_for('project.details', project_id=project.id)}}" method="post" class="env-form">
+                                <form action="{{url_for('project.environ', project_id=project._id)}}" method="post" class="env-form">
                                     {% for key, value in environs.items() %}
                                     {% set id = 'env'+(loop.index | string) %}
                                     {% set envKey = 'envKey'+(loop.index | string) %}
