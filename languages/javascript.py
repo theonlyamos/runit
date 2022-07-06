@@ -7,7 +7,7 @@ from typing import Any
 
 load_dotenv()
 
-JS_TOOLS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'tools', 'nodejs')
+JS_TOOLS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'tools', 'node')
 LOADER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'loader.js'))
 RUNNER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'runner.js'))
 
@@ -32,7 +32,7 @@ class Javascript(object):
         '''
         
         try:
-            command = check_output(f'nodejs {LOADER} {self.module}', shell=True)
+            command = check_output(f'node {LOADER} {self.module}', shell=True)
             result = str(command)
             result = result.lstrip("b'").lstrip('"').replace('\\n', '\n').replace('\\r', '\r').rstrip("'").rstrip('"')
             self.functions = eval(result)
@@ -55,9 +55,9 @@ class Javascript(object):
         args = ', '.join(args)
         try:
             if len(args):
-                command = check_output(f'nodejs {RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
+                command = check_output(f'node {RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
             else:
-                command = check_output(f'nodejs {RUNNER} {self.module} {self.current_func}', shell=True)
+                command = check_output(f'node {RUNNER} {self.module} {self.current_func}', shell=True)
 
             result = str(command)
             return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'")
