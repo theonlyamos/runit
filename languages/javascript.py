@@ -7,7 +7,7 @@ from typing import Any
 
 load_dotenv()
 
-JS_TOOLS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'tools', 'node')
+JS_TOOLS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'tools', 'nodejs')
 LOADER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'loader.js'))
 RUNNER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'runner.js'))
 
