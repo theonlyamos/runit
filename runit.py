@@ -22,8 +22,8 @@ load_dotenv()
 VERSION = "0.0.1"
 CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
-STARTER_FILES = {'python': 'application.py', 'php': 'index.php','nodejs': 'index.js'}
-EXTENSIONS = {'python': '.py',  'php': '.php', 'nodejs': '.js'}
+STARTER_FILES = {'python': 'application.py', 'php': 'index.php','javascript': 'main.js'}
+EXTENSIONS = {'python': '.py',  'php': '.php', 'javascript': '.js'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
@@ -154,6 +154,7 @@ class RunIt:
         project = cls(**RunIt.load_config())
 
         args = request.args
+        
         args_list = []
         for key, value in args.items():
             args_list.append(value)
@@ -213,9 +214,7 @@ class RunIt:
     def serve(self, func='index', args=None):
         global NOT_FOUND_FILE
 
-        start_file = self.start_file
-
-        lang_parser = LanguageParser.detect_language(start_file)
+        lang_parser = LanguageParser.detect_language(self.start_file)
         lang_parser.current_func = func
         try:
             return getattr(lang_parser, func)(*args)
@@ -490,7 +489,7 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-    new_parser.add_argument('-L', '--language', type=str, choices=['python', 'php', 'nodejs'], default='python', 
+    new_parser.add_argument('-L', '--language', type=str, choices=['python', 'php', 'javascript'],
                         help="Language of the new project")
     new_parser.add_argument('-R','--runtime', type=str,
                         help="Runtime of the project language. E.g: python3.10, node")
