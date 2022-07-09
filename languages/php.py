@@ -3,6 +3,10 @@ import os
 from subprocess import check_output
 from typing import Any
 
+JS_TOOLS_DIR = os.path.join(os.getenv('RUNIT_HOMEDIR'), 'tools', 'php')
+LOADER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'loader.php'))
+RUNNER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'runner.php'))
+
 class PHP(object):
     '''
     Class for parsing and running php
@@ -10,52 +14,54 @@ class PHP(object):
     '''
     def __init__(self, filename):
         self.filename = filename
-        self.functions = {}
+        self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
+        self.functions = []
         self.load_functions_from_file()
     
     def load_functions_from_file(self):
-        with open(self.filename, 'rt') as file:
-            lines = file.readlines()
-            lines = [l for l in lines if l.strip() != '?>'] 
-            if not lines[-1].strip():
-                del lines[-1]
+        '''
+        Class method for retrieving exported
+        function names in .php file
 
-        array = []
-
-        for line in range(0, len(lines)):
-            if 'function' in lines[line]:
-                name = lines[line].strip().split(' ')[1].split('(')[0]
-                args = lines[line].strip().split('(')[1].split(')')[0].split(',')
-                args = [a.replace('$', '') for a in args]
-                args = [a for a in args if a]
-                self.functions[name] = {'name': name, 'args': args}
-                
-                if lines[line].rstrip().endswith('{'):
-                    array.append([line, lines[line].lstrip(), 1])
-                else:
-                    array.append([line, lines[line].lstrip().rstrip('\n')+'{\n', 0])
+        @param None
+        @return None
+        '''
         
-        for arr in range(0, len(array)):
-            key = array[arr][1].strip().split(' ')[1].split('(')[0]
-            if arr < len(array)-1:
-                if array[arr][2]:
-                    self.functions[key]['code'] = array[arr][1]+''.join([r for r in
-                        lines[array[arr][0]+1:array[arr+1][0]-1]])
-                else:
-                    self.functions[key]['code'] = array[arr][1]+''.join([r for r in
-                        lines[array[arr][0]+2:array[arr+1][0]-1]])
-            else:
-                if array[arr][2]:
-                    self.functions[key]['code'] =  array[arr][1]+''.join([r for r in lines[array[arr][0]+1:]])
-                else:
-                    self.functions[key]['code'] = array[arr][1],''.join([r for r in lines[array[arr][0]+2:]])
+        try:
+            command = check_output(f'php {LOADER} {self.module}', shell=True)
+            result = str(command)
+            result = result.lstrip("b'").lstrip('"').replace('\\n', '\n').replace('\\r', '\r').rstrip("'").rstrip('"').strip()
+            self.functions = result.split(',')
 
-        for key in self.functions.keys():
-            self.__setattr__(key, self.anon_function)
+            for key in self.functions:
+                self.__setattr__(key, self.anon_function)
+        except Exception as e:
+            print(str(e))
+            return str(e)
     
     def list_functions(self):
-        return [func for func in self.functions.keys()]
+        '''
+        List Class methods
 
+        @param None
+        @retun None
+        '''
+        return [func for func in self.functions]
+    
+    def anon_function(self, *args):
+        args = ', '.join(args)
+        try:
+            if len(args):
+                command = check_output(f'php {RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
+            else:
+                command = check_output(f'php {RUNNER} {self.module} {self.current_func}', shell=True)
+
+            result = str(command)
+            return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'").strip()
+        except Exception as e:
+            return str(e)
+
+    '''
     def anon_function(self, *args):
         func = self.functions[self.current_func]
         if len(args) != len(func['args']):
@@ -87,4 +93,5 @@ class PHP(object):
         command = check_output(f'php {tempfile}', shell=True)
         os.unlink(tempfile)
         result = str(command)
-        return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'")
+        return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'").strip()
+    '''

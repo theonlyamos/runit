@@ -91,18 +91,7 @@ ylesheet">
                     <div class="card rounded-0 shadow align-self-center">
                         <div class="card-body p-0">
                             <div class="d-flex">
-                                <div class="sidebar position-relative d-none d-sm-flex flex-column text-bg-dark">
-                                    {% for item in session['menu'] %}
-                                    <a href="{{ url_for(item['url']) }}" 
-                                        class="nav-link p-2 py-3 opacity-75 {% if item['name'] == page %}opacity-100{% endif %}"
-                                        title="{{ item['name'] | capitalize }}">
-                                        <i class="fas fa-{{ item['icon']}} fa-fw fa-2x"></i>
-                                    </a>
-                                    {% endfor %}
-                                    <a href="{{ url_for('account.logout') }}" class="nav-link p-2 py-3 text-danger position-absolute bottom-0">
-                                        <i class="fas fa-sign-out-alt fa-fw fa-2x"></i>
-                                    </a>
-                                </div>
+                                {% include 'sidebar.html' %}
                                 <div class="main-content w-100 position-relative">
                                     <nav class="d-flex justify-content-between p-4">
                                         <a href="#offcanvasMenu" class="nav-link text-dark d-sm-none" data-bs-toggle="offcanvas" role="button" aria-controls="offcanvasMenu">

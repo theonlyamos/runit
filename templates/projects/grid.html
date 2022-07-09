@@ -11,12 +11,16 @@
         </a>
         <ul class="dropdown-menu rounded-0 shadow">
             <li>
-                <a href="{{url_for('project.details', project_id=project.id)}}" class="dropdown-item small py-0">
-                    Open
+                <a href="{{url_for('public.run', project_id=project.id, function='index')}}" class="dropdown-item small py-0" target="_blank">
+                    Run
                 </a>
             </li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item small py-0" href="#">Details</a></li>
+            <li>
+                <a href="{{url_for('project.details', project_id=project.id)}}" class="dropdown-item small py-0">
+                    Details
+                </a>
+            </li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item text-danger small py-0" href="#">Delete</a></li>
         </ul>

@@ -1,7 +1,7 @@
 #from packages import request
 
 def index():
-    return 'Hello World'
+    return 'Yay, Python works'
 
 def counter():
     return [i for i in range(0, 9)]

@@ -60,6 +60,6 @@ class Javascript(object):
                 command = check_output(f'node {RUNNER} {self.module} {self.current_func}', shell=True)
 
             result = str(command)
-            return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'")
+            return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'").strip()
         except Exception as e:
             return str(e)

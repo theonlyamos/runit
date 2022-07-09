@@ -24,9 +24,20 @@
 
     <div class="tools d-flex justify-content-end">
         <div class="btn-group" role="group" aria-label="tool buttons">
-            <a href="#" class="btn btn-sm btn-dark hover:shadow-sm mb-2" data-bs-toggle="tab" data-bs-target="#nav-console" role="button" aria-controls="nav-console" aria-selected="false" title="Open Console">
-                <i class="fas fa-terminal"></i>
-            </a>
+            <nav class="nav-item dropdown">
+                <a href="#" class="btn btn-sm btn-dark hover:shadow-sm mb-2" data-bs-toggle="dropdown" role="button" aria-expanded="false" title="Run Functions">
+                    <i class="fas fa-terminal"></i>
+                </a>
+                <ul class="dropdown-menu rounded-0 shadow py-0">
+                    {% for func in funcs %}
+                    <li>
+                        <a href="{{func.link}}" class="dropdown-item small border-bottom text-bg-danger bg-gradient" target="_blank">
+                            <i class="fas fa-terminal fa-fw text-dark"></i> {{func.name}}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
             <a href="{{ url_for('project.index')}}" role="button" class="btn btn-sm btn-secondary hover:shadow-sm mb-2" title="Disable Project">
                 <i class="fas fa-eye-slash"></i>
             </a>

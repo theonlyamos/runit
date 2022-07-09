@@ -52,7 +52,7 @@ class Project():
 
         return Database.db.projects.insert_one(data)
     
-    def update(self, update: dict):
+    def update(self, update: dict = {}):
         '''
         Instance Method for updating Project instance to database
 

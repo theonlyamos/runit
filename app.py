@@ -27,18 +27,10 @@ if __name__ != '__main__':
     app.logger.setLevel(gunicorn_logger.level)
 
 REQUESTS = []
-MENU = [
-    {'name': 'home', 'icon': 'home', 'url': 'account.index'},
-    {'name': 'projects', 'icon': 'th-large', 'url': 'project.index'},
-    {'name': 'functions', 'icon': 'terminal', 'url': 'account.functions'},
-    {'name': 'profile', 'icon': 'user', 'url': 'account.profile'}
-]
 
 @app.before_first_request
 def init():
-    global MENU
     global app
-    session['menu'] = MENU
     #session.clear()
     Database.initialize(app)
     if not (os.path.exists(os.path.join(os.curdir, 'accounts'))):

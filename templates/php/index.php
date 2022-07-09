@@ -2,7 +2,7 @@
 
 function index()
 {
-    echo 'Hello World';
+    echo 'Yay, PHP works!!!';
 }
 
 function printer($word){

@@ -39,17 +39,26 @@ def index():
 
 @project.get('/<project_id>/')
 def details(project_id):
+    old_curdir = os.curdir
     user_id = session['user_id']
-    if not os.path.isfile(os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env'))):
-        file = open(os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env')), 'w')
+    os.chdir(os.path.realpath(os.path.join(PROJECTS_DIR, project_id)))
+    if not os.path.isfile('.env'):
+        file = open('.env', 'w')
         file.close()
 
-    environs = dotenv_values(os.path.realpath(os.path.join(PROJECTS_DIR, project_id, '.env')))
+    environs = dotenv_values('.env')
 
+    runit = RunIt(**RunIt.load_config())
+
+    funcs = []
+    for func in runit.get_functions():
+        funcs.append({'name': func, 'link': f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/"})
+    
+    os.chdir(old_curdir)
     project = Project.get(project_id)
     if project:
         return render_template('projects/details.html', page='projects',\
-            project=project.json(), environs=environs)
+            project=project.json(), environs=environs, funcs=funcs)
     else:
         flash('Project does not exist', 'danger')
         return redirect(url_for('project.index'))

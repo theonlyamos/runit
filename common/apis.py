@@ -85,6 +85,8 @@ class ProjectRS(Resource):
                 project.update({'homepage': homepage})
                 result['project_id'] = project_id
             else:
+                project = Project.get(data['_id'])
+                project.update()
                 project_id = data['_id']
             if not os.path.exists(os.path.join(PROJECTS_DIR, project_id)):
                 os.mkdir(os.path.join(PROJECTS_DIR, project_id))

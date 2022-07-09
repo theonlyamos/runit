@@ -1,5 +1,5 @@
 exports.index = ()=>{
-    console.log('Hello world')
+    console.log('Yay, Javascript works!!!')
 }
 
 exports.counter = ()=>{
