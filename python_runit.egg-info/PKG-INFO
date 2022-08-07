@@ -1,0 +1,20 @@
+Metadata-Version: 2.1
+Name: python-runit
+Version: 0.0.4
+Summary: Develop serverless applictions
+Author: Amos Amissah
+Author-email: theonlyamos@gmail.com
+Project-URL: Source, https://github.com/theonlyamos/runit/
+Project-URL: Tracker, https://github.com/theonlyamos/runit/issues
+Keywords: python3 runit developer serverless architecture docker
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+
+Run standalone functions on the web

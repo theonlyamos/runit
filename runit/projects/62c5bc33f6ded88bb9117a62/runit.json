@@ -1,0 +1,15 @@
+{
+    "_id": "62c5bc33f6ded88bb9117a62",
+    "name": "jsstarter",
+    "version": "0.0.1",
+    "description": "",
+    "homepage": "https://theonlyamos.design/62c622bf6f7eea84830a59f2/",
+    "language": "javascript",
+    "framework": "",
+    "runtime": "nodejs",
+    "start_file": "main.js",
+    "author": {
+        "name": "Amos Amissah",
+        "email": "theonlyamos@gmail.com"
+    }
+}
