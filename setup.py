@@ -8,7 +8,7 @@ setup(
     version=VERSION,
     author='Amos Amissah',
     author_email='theonlyamos@gmail.com',
-    description='Develop serverless applictions',
+    description='Develop serverless applications',
     long_description='Run standalone functions on the web',
     packages=find_packages(),
     include_package_data=True,
@@ -20,7 +20,7 @@ setup(
         'Tracker': 'https://github.com/theonlyamos/runit/issues',
     },
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 1 - Alpha',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
@@ -29,10 +29,11 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
     entry_points={
         'console_scripts': [
-            'runit=runit.runit:main',
+            'runit=src.runit:main',
         ],
     }
 )
