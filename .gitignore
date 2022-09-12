@@ -12,14 +12,14 @@
 
 account.db
 
-/venv
-/dump
+/src/venv
+/src/dump
 
-/accounts
+/src/accounts
 
-/projects
+/src/projects
 
-/php
+/src/php
 /__pycache__
 
 */__pycache__
