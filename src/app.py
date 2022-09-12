@@ -1,4 +1,4 @@
-#! python3
+#! python
 
 from flask import Flask, jsonify, redirect, url_for, session, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
