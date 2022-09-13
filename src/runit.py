@@ -544,7 +544,7 @@ def get_arguments():
     functions_parser.add_argument('-P', '--project', type=str, help="Project ID")
     functions_parser.set_defaults(func=get_functions)
 
-    publish_parser = subparsers.add_parser('publish', help='Create new project or function')
+    publish_parser = subparsers.add_parser('publish', help='Publish current project')
     publish_parser.set_defaults(func=publish)
     parser.add_argument('-C','--config', type=is_file, default='runit.json', 
                         help="Configuration File, defaults to 'runit.json'") 
