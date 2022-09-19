@@ -46,7 +46,7 @@ class PHP(object):
         @param None
         @retun None
         '''
-        return [func for func in self.functions]
+        return self.functions
     
     def anon_function(self, *args):
         args = ', '.join(args)

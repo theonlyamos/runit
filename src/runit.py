@@ -211,15 +211,24 @@ class RunIt:
         lang_parser = LanguageParser.detect_language(self.start_file)
         return lang_parser.list_functions()
     
-    def serve(self, func='index', args=None):
+    def serve(self, func: str='index', args: dict={}):
         global NOT_FOUND_FILE
+        global request
 
         lang_parser = LanguageParser.detect_language(self.start_file)
         lang_parser.current_func = func
+
+        args = args if args else dict(request.args)
+
+        args_list = []
+        for key, value in args.items():
+            args_list.append(value)
+
         try:
-            return getattr(lang_parser, func)(*args)
+            return getattr(lang_parser, func)(*args_list)
         except AttributeError as e:
-            return f"Function with name '{func}' not defined!"
+            return RunIt.notfound()
+            # return f"Function with name '{func}' not defined!"
         except TypeError as e:
             try:
                 return getattr(lang_parser, func)()
