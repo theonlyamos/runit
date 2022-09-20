@@ -34,7 +34,7 @@ class Model():
         return Database.db.insert(Model.TABLE_NAME, data)
     
     @classmethod
-    def update(cls, query, update: dict):
+    def update(cls, update: dict, query={}):
         '''
         Class Method for updating model in database
 
@@ -67,21 +67,22 @@ class Model():
 
         return Database.db.count(cls.TABLE_NAME)
 
-    @classmethod
-    def get(cls, id = None):
-        '''
-        Class Method for retrieving function(s) by _id 
-        or all if _id is None
+    # @classmethod
+    # def get(cls, id = None):
+    #     '''
+    #     Class Method for retrieving function(s) by _id 
+    #     or all if _id is None
 
-        @param _id ID of the function in database
-        @return Function instance(s)
-        '''
+    #     @param _id ID of the function in database
+    #     @return Function instance(s)
+    #     '''
 
-        if id is None:
-            return [cls(**Model.normalise(elem)) for elem in Database.db.find(cls.TABLE_NAME)]
+    #     if id is None:
+    #         return [cls(**Model.normalise(elem)) for elem in Database.db.find(cls.TABLE_NAME)]
 
-        model = Database.db.find_one(cls.TABLE_NAME, Model.normalise({'id': id}, 'params'))
-        return cls(**Model.normalise(model)) if model else None
+    #     model = Database.db.find_one(cls.TABLE_NAME, Model.normalise({'id': id}, 'params'))
+    #     print(model)
+    #     return cls(**Model.normalise(model)) if model else None
     
     @classmethod
     def sum(cls, column: str)->int:
@@ -95,7 +96,7 @@ class Model():
         return Database.sum(cls.TABLE_NAME, column)
 
     @classmethod
-    def get(cls, _id = None):
+    def get(cls, id = None):
         '''
         Class Method for retrieving model \n
         model data from database
@@ -104,9 +105,9 @@ class Model():
         @return List[Model] instance(s)
         '''
 
-        if _id is not None:
-            model = Database.find_one(cls.TABLE_NAME, {'id': _id})
-            return cls(**model) if model else None
+        if id is not None:
+            model = Database.db.find_one(cls.TABLE_NAME, Model.normalise({'id': id}, 'params'))
+            return cls(**Model.normalise(model)) if model else None
         
         query = 'SELECT '
         if cls.SELECTED_COLUMNS:
@@ -153,7 +154,7 @@ class Model():
         @return List[Model] instance(s)
         '''
 
-        return [cls(**elem) for elem in Database.find(cls.TABLE_NAME)]
+        return [cls(**Model.normalise(elem)) for elem in Database.db.find(cls.TABLE_NAME, {})]
         
     @classmethod
     def find(cls, params: dict)-> list:

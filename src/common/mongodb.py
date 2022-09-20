@@ -19,7 +19,7 @@ class MongoDB(object):
 
     @staticmethod
     def insert(collection, data):
-        MongoDB.db[collection].insert_one(data)
+        return MongoDB.db[collection].insert_one(data)
 
     @staticmethod
     def find(collection, query):

@@ -79,15 +79,6 @@ def get_parameters():
         return jsonify(REQUESTS.pop())
     return jsonify({'GET': {}, 'POST': {}})
 
-from blueprints import public, account, functions, project, admin, setup
-
-app.register_blueprint(setup)
-app.register_blueprint(public)
-app.register_blueprint(functions)
-app.register_blueprint(account)
-app.register_blueprint(project)
-app.register_blueprint(admin, subdomain='admin')
-
 @app.before_first_request
 def init():
     global app
@@ -112,6 +103,15 @@ def startup():
         REQUESTS.insert(0, 
                         {'GET': request.args.to_dict(),
                         'POST': request.form.to_dict()})
+
+from blueprints import public, account, functions, project, admin, setup
+
+app.register_blueprint(setup)
+app.register_blueprint(public)
+app.register_blueprint(functions)
+app.register_blueprint(account)
+app.register_blueprint(project)
+app.register_blueprint(admin, subdomain='admin')
 
 if __name__ == "__main__":
     app.run(debug=True, port=9000)

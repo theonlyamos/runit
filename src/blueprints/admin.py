@@ -6,6 +6,7 @@ from flask import Blueprint, flash, render_template, redirect, \
     url_for, request, session
 from bson.objectid import ObjectId
 
+from models import User
 from models import Project
 from models import Admin
 from common import Database
@@ -32,6 +33,9 @@ def loginpage():
 
 @admin.route('/')
 def index():
+    if not 'admin_id' in session:
+        return redirect(url_for('admin.loginpage'))
+    
     admin = Admin.get(session['admin_id'])
     return render_template('admin/index.html', page='home', admin=admin)
 
@@ -41,7 +45,7 @@ def login():
     password = request.form.get('password')
 
     admin = Admin.get_by_username(username)
-    print(admin)
+    #print(admin)
     if admin:
         if (Utils.check_hashed_password(password, admin.password)):
             session['admin_id'] = admin.id
@@ -51,29 +55,36 @@ def login():
     flash('Invalid Login Credentials', 'danger')
     return redirect(url_for('admin.loginpage'))
 
+@admin.get('/users/')
+def users():
+    users = User.all()
+    view = request.args.get('view')
+    view = view if view else 'grid'
 
-@admin.route('/projects/', methods=['GET', 'POST', 'PATCH', 'DELETE'])
+    return render_template('admin/users/index.html', page='users',\
+            users=users, view=view, icons=LANGUAGE_ICONS)
+
+@admin.get('/users/<string:user_id>')
+@admin.get('/users/<string:user_id>/')
+def user(user_id):
+    try:
+        user = User.get(user_id)
+        projects = Project.get_by_user(user.id)
+        
+        view = request.args.get('view')
+        view = view if view else 'grid'
+        
+        return render_template('admin/users/details.html', page='users',\
+            user=user.json(), projects=projects, view=view, icons=LANGUAGE_ICONS)
+    except Exception as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('admin.users'))
+
+@admin.get('/projects/')
 def projects():
-    admin_id = session['admin_id']
-    if request.method == 'GET':
-        projects = Project.get_by_admin(admin_id)
-        return render_template('projects/index.html', page='projects',\
-             projects=projects)
-
-    elif request.method == 'POST':
-        name = request.form.get('name')
-        date = (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S")
-        if name:
-            Project(name, admin_id).save()
-            flash('Project created successfully', category='success')
-        else:
-            flash('Name of the project is required', category='danger')
-        return redirect(url_for('admin.projects'))
-    
-    elif request.method == 'PATCH':
-        return render_template('projects/index.html', page='projects', projects=[])
-    elif request.method == 'DELETE':
-        return render_template('projects/index.html', page='projects', projects=[])
+    projects = Project.all()
+    return render_template('admin/projects/index.html', page='projects',\
+            projects=projects)
 
 @admin.route('/functions/', methods=['GET', 'POST', 'PATCH', 'DELETE'])
 def functions():

@@ -155,11 +155,12 @@ class Account():
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
             url = BASE_API + 'account/'
-
+            
             request = requests.get(url, headers=BASE_HEADERS)
             result = request.json()
+
             if 'msg' in result.keys():
-                raise Exception(result['msg'])
+                raise Exception('[Error] '+result['msg'])
             print(result)
 
         except Exception as e:

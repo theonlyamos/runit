@@ -60,26 +60,6 @@ class User(Model):
 
         return Database.db.find('projects', {'user_id': self.id}, 'params')
     
-    def functions(self):#-> List[Function]:
-        '''
-        Instance Method for retrieving Functions of User Instance
-
-        @params None
-        @return List of Function Instances
-        '''
-
-        return Database.db.find('functions', User.normalise({'user_id': self.id}, 'params'))
-
-    def count_functions(self)-> int:
-        '''
-        Instance Method for counting User functions
-
-        @params None
-        @return int Count of functions
-        '''
-
-        return Database.db.count('functions', User.normalise({'user_id': self.id}, 'params'))
-
     def count_projects(self)-> int:
         '''
         Instance Method for counting User Projects
@@ -103,7 +83,6 @@ class User(Model):
             "name": self.name,
             "email": self.email,
             "projects": self.count_projects(),
-            "functions": self.count_functions(),
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }

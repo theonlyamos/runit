@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from runit import RunIt
 
 load_dotenv()
-PROJECTS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'projects')
+PROJECTS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'projects')
 
 def stringifyObjectIds(model: object, properties: list)-> object:
     for property in properties:
@@ -46,7 +46,7 @@ class Account(Resource):
     def get(self):
         user = User.get(get_jwt_identity())
 
-        return user.json() if user else None
+        return user.json() if user else {'msg': 'Not Logged In!'}
 
 class ProjectRS(Resource):
     '''
@@ -70,13 +70,15 @@ class ProjectRS(Resource):
         @return Projects: dict Get all projects
         '''
         try:
-            data = request.form
+            data = dict(request.form)
             file = request.files['file']
             
             result = {'status': 'success'}
             user = User.get(get_jwt_identity())
 
+            
             if not '_id' in data.keys() or not len(data['_id']):
+                del data['_id']
                 project = Project(user.id, **data)
                 project_id = project.save().inserted_id
                 project_id = str(project_id)
@@ -85,9 +87,11 @@ class ProjectRS(Resource):
                 project.update({'homepage': homepage})
                 result['project_id'] = project_id
             else:
-                project = Project.get(data['_id'])
-                project.update()
                 project_id = data['_id']
+                project = Project.get(data['_id'])
+                del data['_id']
+                project.update(data, {'id': project.id})
+    
             if not os.path.exists(os.path.join(PROJECTS_DIR, project_id)):
                 os.mkdir(os.path.join(PROJECTS_DIR, project_id))
             filepath = os.path.join(PROJECTS_DIR, project_id, secure_filename(file.filename))
@@ -122,11 +126,11 @@ class ProjectById(Resource):
     
     @jwt_required()
     def post(self, project_id):
-        data = request.get_json()
+        data = dict(request.get_json())
         
         project = Project.get(project_id)
         if project:
-            result =  project.update(data)
+            result =  Project.update(data)
             return {'status': 'success', 'message': 'Operation Successful!'}
 
         return {'status': 'error', 'message': 'Operation unsuccessful'}

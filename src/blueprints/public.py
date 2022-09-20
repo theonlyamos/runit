@@ -31,7 +31,7 @@ def project(project_id):
     if os.path.isdir(os.path.join(PROJECTS_DIR, project_id)):
         result = RunIt.start(project_id, 'index')
         os.chdir(os.getenv('RUNIT_HOMEDIR'))
-        return jsonify(result)
+        return result
 
     return RunIt.notfound()
 
@@ -40,7 +40,7 @@ def run(project_id, function):
     if os.path.isdir(os.path.join(PROJECTS_DIR, project_id)):
         result = RunIt.start(project_id, function)
         os.chdir(os.getenv('RUNIT_HOMEDIR'))
-        return jsonify(result)
+        return result
 
     return RunIt.notfound()
 
@@ -60,7 +60,7 @@ def register():
             return render_template('register.html')
         
         user = User(email, name, password).save()
-        print(user.inserted_id)
+        #print(user.inserted_id)
         flash('Registration Successful!', 'success')
         return redirect(url_for('public.index'))
 

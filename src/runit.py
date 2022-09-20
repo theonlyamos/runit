@@ -423,10 +423,10 @@ def publish(args):
     CONFIG_FILE = args.config
 
     global BASE_HEADERS
-    token = load_token()
+    # token = load_token()
 
-    headers = {}
-    headers['Authorization'] = f"Bearer {token}"
+    # headers = {}
+    # headers['Authorization'] = f"Bearer {token}"
 
     Account.isauthenticated({})
     user = Account.user()

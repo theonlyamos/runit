@@ -10,8 +10,6 @@
 
 .flaskenv
 
-account.db
-
 /src/venv
 /src/dump
 
@@ -29,3 +27,13 @@ account.db
 /blueprints/__pycache__
 
 */*/*/__pycache__
+*.db
+
+*.bak
+
+*.dat
+*.dir
+/src/modules/account.bak
+/src/modules/account.dat
+/src/modules/account.dir
+/src/modules/account.py
