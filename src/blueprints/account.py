@@ -86,9 +86,21 @@ def functions():
             flash('Error: Name and Language fields are required!', category='danger')
         return redirect(url_for('account.functions'))
 
-@account.route('/profile/')
+@account.get('/profile')
+@account.get('/profile/')
 def profile():
-    return render_template('account/profile.html', page='profile')
+    try:
+        user_id = session['user_id']
+        user = User.get(user_id)
+        
+        view = request.args.get('view')
+        view = view if view else 'grid'
+        
+        return render_template('account/profile.html', page='profile',\
+            user=user.json())
+    except Exception as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('account.index'))
 
 @account.route('/logout/')
 def logout():
