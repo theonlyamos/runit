@@ -4,7 +4,6 @@
     "description": "",
     "homepage": "",
     "language": "php",
-    "framework": "",
     "runtime": "php",
     "start_file": "runner.php",
     "author": {

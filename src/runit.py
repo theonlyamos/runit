@@ -51,7 +51,7 @@ def StartWebserver(project):
 
 class RunIt:
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
-    language="", framework="", runtime="", start_file="", author={}):
+    language="", runtime="", start_file="", author={}):
         global STARTER_FILES
 
         self._id = _id
@@ -60,7 +60,6 @@ class RunIt:
         self.description = description
         self.homepage = homepage
         self.language = language
-        self.framework = framework
         self.runtime = runtime
         self.author = author
         self.config = {}
@@ -274,7 +273,6 @@ class RunIt:
         self.config['description'] = self.description
         self.config['homepage'] = self.homepage
         self.config['language'] = self.language
-        self.config['framework'] = self.framework
         self.config['runtime'] = self.runtime
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author
@@ -294,7 +292,6 @@ class RunIt:
                     #print(filepath)
                     print(os.path.basename(filepath), zipname, os.path.basename(filepath) != zipname)
                     if not os.path.basename(filepath) in exclude_list:
-                        print(f'[{filepath}] Compressing', end='\r')
                         zipobj.write(filepath, filepath)
                         print(f'[{filepath}] Compressed!')
             print(f'[!] Filename: {zipname}')
@@ -307,7 +304,6 @@ class RunIt:
         self.config['description'] = self.description
         self.config['homepage'] = 'https://example.com/project_id/'
         self.config['language'] = self.language
-        self.config['framework'] = self.framework
         self.config['runtime'] = self.runtime
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author

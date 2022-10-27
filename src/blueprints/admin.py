@@ -5,6 +5,7 @@ from sys import prefix
 from flask import Blueprint, flash, render_template, redirect, \
     url_for, request, session
 from bson.objectid import ObjectId
+from dotenv import load_dotenv, dotenv_values, set_key
 
 from models import User
 from models import Project
@@ -19,6 +20,7 @@ from runit import RunIt
 EXTENSIONS = {'python': '.py', 'python3': '.py', 'php': '.php', 'javascript': '.js'}
 LANGUAGE_ICONS = {'python': 'python', 'python3': 'python', 'php': 'php',
                   'javascript': 'node-js', 'typescript': 'node-js'}
+PROJECTS_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'projects'))
 
 admin = Blueprint('admin', __name__, subdomain='admin', static_folder=os.path.join('..','static'))
 
@@ -80,11 +82,40 @@ def user(user_id):
         flash(str(e), 'danger')
         return redirect(url_for('admin.users'))
 
+@admin.get('/projects')
 @admin.get('/projects/')
 def projects():
     projects = Project.all()
     return render_template('admin/projects/index.html', page='projects',\
-            projects=projects)
+            projects=projects, icons=LANGUAGE_ICONS)
+
+@admin.get('/projects/<project_id>')
+@admin.get('/projects/<project_id>/')
+def project(project_id):
+    old_curdir = os.curdir
+    # user_id = session['user_id']
+    
+    os.chdir(os.path.realpath(os.path.join(PROJECTS_DIR, project_id)))
+    if not os.path.isfile('.env'):
+        file = open('.env', 'w')
+        file.close()
+
+    environs = dotenv_values('.env')
+
+    runit = RunIt(**RunIt.load_config())
+
+    funcs = []
+    for func in runit.get_functions():
+        funcs.append({'name': func, 'link': f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/{project_id}/{func}/"})
+    
+    os.chdir(old_curdir)
+    project = Project.get(project_id)
+    if project:
+        return render_template('admin/projects/details.html', page='projects',\
+            project=project.json(), environs=environs, funcs=funcs)
+    else:
+        flash('Project does not exist', 'danger')
+        return redirect(url_for('project.index'))
 
 @admin.route('/functions/', methods=['GET', 'POST', 'PATCH', 'DELETE'])
 def functions():

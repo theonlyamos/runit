@@ -1,7 +1,7 @@
 <div class="d-flex flex-wrap">
 {% for project in projects %}
 <div class="position-relative m-2 text-black">
-    <a href="{{url_for('project.details', project_id=project.id)}}" class="nav-link d-flex flex-column align-items-center p-2 text-black-50 hover:text-dark">
+    <a href="{{url_for('admin.project', project_id=project.id)}}" class="nav-link d-flex flex-column align-items-center p-2 text-black-50 hover:text-dark">
         <i class="fab fa-{{ icons[project.language]}} fa-fw fa-2x"></i>
         <small>{{ project['name'] }}</small>
     </a>

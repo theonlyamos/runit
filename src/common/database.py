@@ -59,7 +59,6 @@ class Database():
             description text(500) null,
             homepage varchar(50) null,
             language varchar(50) not null,
-            framework varchar(50) null,
             start_file varchar(50) not null,
             author varchar(200) null,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

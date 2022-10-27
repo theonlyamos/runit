@@ -41,7 +41,7 @@ def index():
 def details(project_id):
     old_curdir = os.curdir
     user_id = session['user_id']
-    print(PROJECTS_DIR)
+    
     os.chdir(os.path.realpath(os.path.join(PROJECTS_DIR, project_id)))
     if not os.path.isfile('.env'):
         file = open('.env', 'w')

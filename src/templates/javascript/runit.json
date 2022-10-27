@@ -4,7 +4,6 @@
     "description": "",
     "homepage": "",
     "language": "javascript",
-    "framework": "",
     "runtime": "node",
     "start_file": "main.js",
     "author": {

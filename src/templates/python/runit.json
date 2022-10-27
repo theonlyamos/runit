@@ -4,7 +4,6 @@
     "description": "",
     "homepage": "",
     "language": "python",
-    "framework": "",
     "runtime": "python",
     "start_file": "application.py",
     "author": {
