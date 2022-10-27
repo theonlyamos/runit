@@ -5,7 +5,7 @@
     "homepage": "",
     "language": "javascript",
     "framework": "",
-    "runtime": "nodejs",
+    "runtime": "node",
     "start_file": "main.js",
     "author": {
         "name": "",

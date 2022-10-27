@@ -3,9 +3,9 @@
     "version": "0.0.0",
     "description": "",
     "homepage": "",
-    "language": "python3",
+    "language": "python",
     "framework": "",
-    "runtime": "3",
+    "runtime": "python",
     "start_file": "application.py",
     "author": {
         "name": "",

@@ -5,7 +5,7 @@ function index()
     echo 'Yay, PHP works!!!';
 }
 
-function printer($word){
+function printout($word){
     echo $word;
 }
 

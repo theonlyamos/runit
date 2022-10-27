@@ -10,6 +10,6 @@ exports.printout = (string)=>{
     console.log(string)
 }
 
-exports.gettime = ()=>{
+exports.time = ()=>{
     console.log(new Date().toUTCString())
 }

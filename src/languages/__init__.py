@@ -17,5 +17,5 @@ class LanguageParser(object):
         pass
     
     @staticmethod
-    def detect_language(filename: str)-> object:
-        return LanguageParser.EXT_TO_LANG[os.path.splitext(filename)[1].lower()](filename)
+    def detect_language(filename: str, runtime: str)-> object:
+        return LanguageParser.EXT_TO_LANG[os.path.splitext(filename)[1].lower()](filename, runtime)

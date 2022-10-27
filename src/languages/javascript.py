@@ -7,7 +7,7 @@ from typing import Any
 
 load_dotenv()
 
-JS_TOOLS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..', 'tools', 'nodejs')
+JS_TOOLS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..', 'tools', 'javascript')
 LOADER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'loader.js'))
 RUNNER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'runner.js'))
 
@@ -16,8 +16,9 @@ class Javascript(object):
     Class for parsing and running
     Javascript functions from file
     '''
-    def __init__(self, filename):
+    def __init__(self, filename, runtime):
         self.filename = filename
+        self.runtime = runtime
         self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
         self.functions = []
         self.load_functions_from_file()
@@ -32,7 +33,7 @@ class Javascript(object):
         '''
         
         try:
-            command = check_output(f'node {LOADER} {self.module}', shell=True)
+            command = check_output(f'{self.runtime} {LOADER} {self.module}', shell=True)
             result = str(command)
             result = result.lstrip("b'").lstrip('"').replace('\\n', '\n').replace('\\r', '\r').rstrip("'").rstrip('"')
             self.functions = eval(result)
@@ -55,9 +56,9 @@ class Javascript(object):
         args = ', '.join(args)
         try:
             if len(args):
-                command = check_output(f'node {RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
+                command = check_output(f'{self.runtime} {RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
             else:
-                command = check_output(f'node {RUNNER} {self.module} {self.current_func}', shell=True)
+                command = check_output(f'{self.runtime} {RUNNER} {self.module} {self.current_func}', shell=True)
 
             result = str(command)
             return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'").strip()

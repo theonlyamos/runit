@@ -161,7 +161,7 @@ class RunIt:
         
         start_file = project.start_file
 
-        lang_parser = LanguageParser.detect_language(start_file)
+        lang_parser = LanguageParser.detect_language(start_file, project.runtime)
         lang_parser.current_func = func
         try:
             return getattr(lang_parser, func)(*args_list)
@@ -172,24 +172,6 @@ class RunIt:
                 return getattr(lang_parser, func)()
             except TypeError as e:
                 return str(e)
-        '''
-        project = cls(**RunIt.load_config())
-
-        if func == "index":
-            start_file = project.start_file
-        else:
-            global EXTENSIONS
-            extension = EXTENSIONS[project.language]
-            start_file = f'{func}{extension}'
-        
-        if os.path.isfile(os.path.join(os.curdir, start_file)):
-            command = check_output(f"{project.language} {start_file}", shell=True)
-            result = str(command)
-            return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'")
-        
-        with open(os.path.join(os.curdir, NOT_FOUND_FILE),'rt') as file:
-            return file.read()
-        '''
     
     @staticmethod
     def notfound():
@@ -208,21 +190,24 @@ class RunIt:
         os.unlink(filepath)
     
     def get_functions(self)->list:
-        lang_parser = LanguageParser.detect_language(self.start_file)
+        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         return lang_parser.list_functions()
     
-    def serve(self, func: str='index', args: dict={}):
+    def serve(self, func: str='index', args: dict|list=None):
         global NOT_FOUND_FILE
         global request
 
-        lang_parser = LanguageParser.detect_language(self.start_file)
+        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         lang_parser.current_func = func
+        
+        if not args and request:
+            args = dict(request.args)
 
-        args = args if args else dict(request.args)
-
-        args_list = []
-        for key, value in args.items():
-            args_list.append(value)
+        args_list = args if type(args) == list else []
+        
+        if type(args) == dict:
+            for key, value in args.items():
+                args_list.append(value)
 
         try:
             return getattr(lang_parser, func)(*args_list)
@@ -498,9 +483,9 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-    new_parser.add_argument('-L', '--language', type=str, choices=['python', 'php', 'javascript'],
+    new_parser.add_argument('-l', '--language', type=str, choices=['python', 'php', 'javascript'],
                         help="Language of the new project")
-    new_parser.add_argument('-R','--runtime', type=str,
+    new_parser.add_argument('-r','--runtime', type=str,
                         help="Runtime of the project language. E.g: python3.10, node")
     new_parser.set_defaults(func=create_new_project)
     
@@ -524,11 +509,11 @@ def get_arguments():
     account_parser = subparsers.add_parser('account', help='Run command on user account')
     #user_subparser = account_parser.add_subparsers()
 
-    account_parser.add_argument('-I', '--info', action='store_true', help="Print out current account info")
+    account_parser.add_argument('-i', '--info', action='store_true', help="Print out current account info")
     account_parser.set_defaults(func=Account.info)
     
     projects_parser = subparsers.add_parser('projects', help='Manage projects')
-    projects_parser.add_argument('-L', '--list', action='store_true', help="List account projects")
+    projects_parser.add_argument('-l', '--list', action='store_true', help="List account projects")
     projects_parser.add_argument('--id', type=str, help="Project ID")
     projects_parser.set_defaults(func=Account.projects)
 
@@ -540,7 +525,7 @@ def get_arguments():
 
     update_project_parser = projects_subparser.add_parser('update', help="Update Project by Id")
     update_project_parser.add_argument('--id', required=True, help="Id of the project to be updated")
-    update_project_parser.add_argument('-D', '--data', required=True, type=str, action='append', help='A dictionary or string. E.g: name="new name" or {"name": "new name"}')
+    update_project_parser.add_argument('-d', '--data', required=True, type=str, action='append', help='A dictionary or string. E.g: name="new name" or {"name": "new name"}')
     update_project_parser.set_defaults(func=Account.update_project)
 
     delete_project_parser = projects_subparser.add_parser('rm', help="Delete Project")
@@ -548,16 +533,16 @@ def get_arguments():
     delete_project_parser.set_defaults(func=Account.delete_project)
 
     functions_parser = subparsers.add_parser('functions', help='Manage functions')
-    functions_parser.add_argument('-L', '--list', action='store_true', help="List project functions")
+    functions_parser.add_argument('-l', '--list', action='store_true', help="List project functions")
     functions_parser.add_argument('--id', type=str, help="Function ID")
-    functions_parser.add_argument('-P', '--project', type=str, help="Project ID")
+    functions_parser.add_argument('-p', '--project', type=str, help="Project ID")
     functions_parser.set_defaults(func=get_functions)
 
     publish_parser = subparsers.add_parser('publish', help='Publish current project')
     publish_parser.set_defaults(func=publish)
-    parser.add_argument('-C','--config', type=is_file, default='runit.json', 
+    parser.add_argument('-c','--config', type=is_file, default='runit.json', 
                         help="Configuration File, defaults to 'runit.json'") 
-    parser.add_argument('-V','--version', action='version', version=f'%(prog)s {VERSION}')
+    parser.add_argument('-v','--version', action='version', version=f'%(prog)s {VERSION}')
     parser.set_defaults(func=print_help)
     return parser.parse_args()
 
