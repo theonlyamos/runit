@@ -1,9 +1,9 @@
 from datetime import datetime
 import os
-from sys import prefix
 
 from flask import Blueprint, flash, render_template, redirect, \
     url_for, request, session
+    
 from bson.objectid import ObjectId
 from dotenv import load_dotenv, dotenv_values, set_key
 

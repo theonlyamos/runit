@@ -7,18 +7,18 @@ from typing import Any
 
 load_dotenv()
 
-JS_TOOLS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..', 'tools', 'javascript')
-LOADER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'loader.js'))
-RUNNER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'runner.js'))
-
-class Javascript(object):
+class Runtime(object):
     '''
     Class for parsing and running
-    Javascript functions from file
+    functions from file
     '''
-    def __init__(self, filename, runtime):
+    LOADER = ""
+    RUNNER = ""
+    
+    def __init__(self, filename="", runtime="", is_file = False):
         self.filename = filename
         self.runtime = runtime
+        self.is_file = is_file
         self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
         self.functions = []
         self.load_functions_from_file()
@@ -33,16 +33,22 @@ class Javascript(object):
         '''
         
         try:
-            command = check_output(f'{self.runtime} {LOADER} {self.module}', shell=True)
+            command = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True)
             result = str(command)
-            result = result.lstrip("b'").lstrip('"').replace('\\n', '\n').replace('\\r', '\r').rstrip("'").rstrip('"')
-            self.functions = eval(result)
+            result = result.lstrip("b'").lstrip('"').replace('\\n', '\n').replace('\\r', '\r').rstrip("'").rstrip('"').strip()
+            
+            if self.runtime == 'php':
+                self.functions = result.split(',')
+            else:
+                self.functions = eval(result)
+
             for key in self.functions:
                 self.__setattr__(key, self.anon_function)
+                
         except Exception as e:
             print(str(e))
             return str(e)
-    
+
     def list_functions(self):
         '''
         List Class methods
@@ -56,9 +62,15 @@ class Javascript(object):
         args = ', '.join(args)
         try:
             if len(args):
-                command = check_output(f'{self.runtime} {RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
+                if self.is_file:
+                    return os.system(f'{self.runtime} {self.filename} "{args}"')
+                else:
+                    command = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
             else:
-                command = check_output(f'{self.runtime} {RUNNER} {self.module} {self.current_func}', shell=True)
+                if self.is_file:
+                    return os.system(f'{self.runtime} {self.filename}')
+                else:
+                    command = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func}', shell=True)
 
             result = str(command)
             return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'").strip()

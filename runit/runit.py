@@ -1,4 +1,4 @@
-#!python
+#! python
 
 import os
 import sys
@@ -11,7 +11,7 @@ from io import TextIOWrapper
 
 from zipfile import ZipFile
 from flask import Flask, request
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
 
 
 from modules import Account
@@ -24,6 +24,8 @@ CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
 STARTER_FILES = {'python': 'application.py', 'php': 'index.php','javascript': 'main.js'}
 EXTENSIONS = {'python': '.py',  'php': '.php', 'javascript': '.js'}
+EXT_TO_LANG = {'.py': 'python', '.php': 'php', '.js': 'javascript'}
+EXT_TO_RUNTIME = {'.py': 'python', '.php': 'php', '.js': 'node'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
@@ -51,7 +53,7 @@ def StartWebserver(project):
 
 class RunIt:
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
-    language="", runtime="", start_file="", author={}):
+    language="", runtime="", start_file="", author={}, is_file: bool = False):
         global STARTER_FILES
 
         self._id = _id
@@ -66,7 +68,7 @@ class RunIt:
         self.start_file = start_file if start_file else STARTER_FILES[self.language]
         self.create_config()
         
-        if not RunIt.has_config_file():
+        if not RunIt.has_config_file() and not is_file:
             self.create_folder()
             self.dump_config()
             self.create_starter_files()
@@ -130,16 +132,21 @@ class RunIt:
 
     @classmethod
     def run(cls, args):
-        if not RunIt.has_config_file():
-            print('No runit project to run')
+        if not RunIt.has_config_file() and not args.file:
+            print('No runit project or file to run')
             sys.exit(1)
-        project = cls(**RunIt.load_config())
-
-        if args.shell:
-            print(project.serve(args.function, args.arguments))
+        elif args.file:
+            filename = args.file
+            runtime = EXT_TO_RUNTIME[os.path.splitext(filename)[1]]
+            lang_parser = LanguageParser.run_file(filename, runtime)
         else:
-            StartWebserver(project)
-    
+            project = cls(**RunIt.load_config())
+
+            if args.shell:
+                print(project.serve(args.function, args.arguments, args.file))
+            else:
+                StartWebserver(project)
+        
     @classmethod
     def start(cls, project_id: str, func='index'):
         global NOT_FOUND_FILE
@@ -192,7 +199,7 @@ class RunIt:
         lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         return lang_parser.list_functions()
     
-    def serve(self, func: str='index', args: dict|list=None):
+    def serve(self, func: str = 'index', args: dict|list=None, filename: str = ''):
         global NOT_FOUND_FILE
         global request
 
@@ -218,30 +225,6 @@ class RunIt:
                 return getattr(lang_parser, func)()
             except TypeError as e:
                 return str(e)
-        '''
-        if func == "index":
-            start_file = self.start_file
-        else:
-            global EXTENSIONS
-            extension = EXTENSIONS[self.language]
-            start_file = f'{func}{extension}'
-        
-
-        import inspect
-        sys.path.append(os.path.abspath(os.curdir))
-        module = __import__(inspect.getmodulename(start_file))
-        function = [f[1] for f in inspect.getmembers(module, inspect.isfunction) if f[0] == func]
-        if function:
-            function[0]()
-        
-        if os.path.isfile(os.path.join(os.curdir, start_file)):
-            command = check_output(f"{self.language} {start_file}", shell=True)
-            result = str(command)
-            return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'")
-        
-        with open(os.path.join(os.curdir, NOT_FOUND_FILE),'rt') as file:
-            return file.read()
-        '''
     
     def create_folder(self):
         os.mkdir(os.path.join(os.curdir, self.name))
@@ -393,11 +376,12 @@ def create_new_project(args):
 def run_project(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
-
-    if CONFIG_FILE:
-        RunIt.run(args)
-    else:
+    
+    if not CONFIG_FILE and not args.file:
         raise FileNotFoundError
+    else:
+        RunIt.run(args)
+            
 
 def publish(args):
     global CONFIG_FILE
@@ -458,6 +442,42 @@ def publish(args):
     for func_url in result['functions']:
         print(f"[-] {func_url}")
 
+def setup_runit(args):
+    '''
+    Setup Runit server side
+    
+    @params args
+    @return None
+    '''
+    global parser
+    domain = args.domain
+    allowed = ['dbms', 'dbhost', 'dbport', 
+               'dbusername', 'dbpassword', 'dbname']
+    
+    settings = dotenv_values(find_dotenv())
+    if not domain:
+        default = os.environ['RUNIT_SERVERNAME']
+        domain = input(f'Server Address [{default}]: ')
+        domain = domain if domain else default
+    
+    for key, value in settings.items():
+        if key in allowed:
+            if getattr(args, key):
+                settings[key] = getattr(args, key)
+            else:
+                settings[key] = input(f'{key} [{value}]: ')
+                if key != 'dbusername' and key != 'dbpassword':
+                    settings[key] = settings[key] if settings[key] else value
+    
+    settings['RUNIT_SERVERNAME'] = domain
+    settings['RUNIT_HOMEDIR'] = os.path.join('..', os.path.realpath(os.path.split(__file__)[0]))
+    
+    if settings['RUNIT_SERVERNAME'] and settings['dbms'] and \
+        settings['dbhost'] and settings['dbport'] and settings['dbname']:
+        settings['setup'] = 'completed'
+    
+    for key, value in settings.items():
+        set_key(find_dotenv(), key, value)
 
 def get_functions(args):
     config = RunIt.load_config()
@@ -485,11 +505,12 @@ def get_arguments():
                         help="Runtime of the project language. E.g: python3.10, node")
     new_parser.set_defaults(func=create_new_project)
     
-    run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
-    run_parser.add_argument('function', default='index', type=str, nargs='?', help='Name of function to run')
-    run_parser.add_argument('--shell', action='store_true', help='Run function only in shell')
-    run_parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
-    run_parser.set_defaults(func=run_project)
+    # run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
+    # run_parser.add_argument('function', default='index', type=str, nargs='?', help='Name of function to run')
+    # run_parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')
+    # run_parser.add_argument('--shell', action='store_true', help='Run function only in shell')
+    # run_parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
+    # run_parser.set_defaults(func=run_project)
 
     login_parser = subparsers.add_parser('login', help="User account login")
     login_parser.add_argument('--email', type=str, help="Account email address")
@@ -502,9 +523,7 @@ def get_arguments():
     register_parser.add_argument('--password', type=str, help="Account password")
     register_parser.set_defaults(func=Account.register)
 
-    account_parser = subparsers.add_parser('account', help='Run command on user account')
-    #user_subparser = account_parser.add_subparsers()
-
+    account_parser = subparsers.add_parser('account', help='Get Current logged in user info')
     account_parser.add_argument('-i', '--info', action='store_true', help="Print out current account info")
     account_parser.set_defaults(func=Account.info)
     
@@ -533,13 +552,28 @@ def get_arguments():
     functions_parser.add_argument('--id', type=str, help="Function ID")
     functions_parser.add_argument('-p', '--project', type=str, help="Project ID")
     functions_parser.set_defaults(func=get_functions)
+    
+    setup_parser = subparsers.add_parser('setup', help='Runit server-side configuration')
+    setup_parser.add_argument('-d', '--domain', type=str, help="Runit server-side domain name")
+    setup_parser.add_argument('--dbms', type=str, help="Runit Database System [mongodb|mysql]", choices=['mongodb', 'mysql'])
+    setup_parser.add_argument('--dbhost', type=str, help="Database host ip address")
+    setup_parser.add_argument('--dbport', type=str, help="Database host port")
+    setup_parser.add_argument('--dbusername', type=str, help="Database user username")
+    setup_parser.add_argument('--dbpassword', type=str, help="Database user password")
+    setup_parser.add_argument('--dbname', type=str, help="Database name")
+    setup_parser.set_defaults(func=setup_runit)
 
     publish_parser = subparsers.add_parser('publish', help='Publish current project')
     publish_parser.set_defaults(func=publish)
+    
+    parser.add_argument('function', default='index', type=str, nargs='?', help='Name of function to run')
+    parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')
+    parser.add_argument('--shell', action='store_true', help='Run function only in shell')
+    parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
     parser.add_argument('-c','--config', type=is_file, default='runit.json', 
                         help="Configuration File, defaults to 'runit.json'") 
     parser.add_argument('-v','--version', action='version', version=f'%(prog)s {VERSION}')
-    parser.set_defaults(func=print_help)
+    parser.set_defaults(func=run_project)
     return parser.parse_args()
 
 def main():
@@ -550,8 +584,8 @@ def main():
         args.func(args)
 
     except FileNotFoundError:
-        print("Config file not found")
-        #parser.print_help()
+        # print("Config file not found")
+        parser.print_help()
     
 if __name__ == "__main__":
     main()

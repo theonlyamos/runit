@@ -10,14 +10,14 @@
 
 .flaskenv
 
-/src/venv
-/src/dump
+/runit/venv
+/runit/dump
 
-/src/accounts
+/runit/accounts
 
-/src/projects
+/runit/projects
 
-/src/php
+/runit/php
 /__pycache__
 
 */__pycache__
@@ -33,7 +33,7 @@
 
 *.dat
 *.dir
-/src/modules/account.bak
-/src/modules/account.dat
-/src/modules/account.dir
-/src/modules/account.py
+/runit/modules/account.bak
+/runit/modules/account.dat
+/runit/modules/account.dir
+/runit/modules/account.py
