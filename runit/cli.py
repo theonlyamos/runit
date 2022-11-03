@@ -21,7 +21,7 @@ EXT_TO_RUNTIME = {'.py': 'python', '.php': 'php', '.js': 'node'}
 
 def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 5000):
     app = Flask(__name__)
-    app.secret = os.getenv('RUNIT_SECRET_KEY')
+    app.secret = "fdakfjlfdsaflfkjbasdoiefanckdareafasdfkowadbfakidfadfkj"
     try:
         app.add_url_rule('/', view_func=project.serve)
         app.add_url_rule('/<func>', view_func=project.serve)
@@ -151,37 +151,23 @@ def publish(args):
 
 def setup_runit(args):
     '''
-    Setup Runit server side
+    Setup Runit server side api
     
     @params args
     @return None
     '''
-    global parser
-    domain = args.domain
-    allowed = ['dbms', 'dbhost', 'dbport', 
-               'dbusername', 'dbpassword', 'dbname']
-    
     settings = dotenv_values(find_dotenv())
-    if not domain:
-        default = os.environ['RUNIT_SERVERNAME']
-        domain = input(f'Server Address [{default}]: ')
-        domain = domain if domain else default
     
-    for key, value in settings.items():
-        if key in allowed:
-            if getattr(args, key):
-                settings[key] = getattr(args, key)
+    if args.api:
+        settings['RUNIT_API_ENDPOINT'] = args.api
+    else:
+        for key, value in settings.items():
+            new_value = input(f'{key} [{value}]: ')
+            if new_value:
+                settings[key] = new_value 
             else:
-                settings[key] = input(f'{key} [{value}]: ')
-                if key != 'dbusername' and key != 'dbpassword':
-                    settings[key] = settings[key] if settings[key] else value
-    
-    settings['RUNIT_SERVERNAME'] = domain
-    settings['RUNIT_HOMEDIR'] = os.path.join('..', os.path.realpath(os.path.split(__file__)[0]))
-    
-    if settings['RUNIT_SERVERNAME'] and settings['dbms'] and \
-        settings['dbhost'] and settings['dbport'] and settings['dbname']:
-        settings['setup'] = 'completed'
+                print(f'{key} cannot be empty')
+                print(f'Setting {key} to default [{value}]')
     
     for key, value in settings.items():
         set_key(find_dotenv(), key, value)
@@ -276,13 +262,7 @@ def get_arguments():
     functions_parser.set_defaults(func=get_functions)
     
     setup_parser = subparsers.add_parser('setup', help='Runit server-side configuration')
-    setup_parser.add_argument('-d', '--domain', type=str, help="Runit server-side domain name")
-    setup_parser.add_argument('--dbms', type=str, help="Runit Database System [mongodb|mysql]", choices=['mongodb', 'mysql'])
-    setup_parser.add_argument('--dbhost', type=str, help="Database host ip address")
-    setup_parser.add_argument('--dbport', type=str, help="Database host port")
-    setup_parser.add_argument('--dbusername', type=str, help="Database user username")
-    setup_parser.add_argument('--dbpassword', type=str, help="Database user password")
-    setup_parser.add_argument('--dbname', type=str, help="Database name")
+    setup_parser.add_argument('--api', type=str, help="Runit server-side api endpoint")
     setup_parser.set_defaults(func=setup_runit)
 
     publish_parser = subparsers.add_parser('publish', help='Publish current project')

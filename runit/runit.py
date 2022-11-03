@@ -109,11 +109,10 @@ class RunIt:
 
 
     @classmethod
-    def start(cls, project_id: str, func='index'):
+    def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR):
         global NOT_FOUND_FILE
-        global PROJECTS_DIR
 
-        os.chdir(os.path.join(PROJECTS_DIR, project_id))
+        os.chdir(PROJECTS_DIR)
         
         if not RunIt.has_config_file():
             return RunIt.notfound()

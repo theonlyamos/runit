@@ -7,7 +7,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-BASE_API = f"{os.getenv('RUNIT_PROTOCOL')}{os.getenv('RUNIT_SERVERNAME')}/api/"
+BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}"
 PROJECTS_API = BASE_API+'projects/'
 RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
 BASE_HEADERS = {}
