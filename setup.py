@@ -33,7 +33,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'runit=runit.runit:main',
+            'runit=runit.cli:main',
         ],
     }
 )
