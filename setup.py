@@ -20,7 +20,7 @@ setup(
         'Tracker': 'https://github.com/theonlyamos/runit/issues',
     },
     classifiers=[
-        'Development Status :: 1 - Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',

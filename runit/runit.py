@@ -11,7 +11,7 @@ from io import TextIOWrapper
 from .languages import LanguageParser
 
 
-VERSION = "0.0.5"
+VERSION = "0.0.6"
 CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
 STARTER_FILES = {'python': 'application.py', 'php': 'index.php','javascript': 'main.js'}
@@ -112,7 +112,7 @@ class RunIt:
     def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR):
         global NOT_FOUND_FILE
 
-        os.chdir(PROJECTS_DIR)
+        os.chdir(projects_folder)
         
         if not RunIt.has_config_file():
             return RunIt.notfound()
