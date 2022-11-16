@@ -18,8 +18,14 @@ runit --version|-v
 runit new <project_name> --language <language> --runtime <runtime>
 ```
 
-- Run Project Locally
+- Run project locally
 cd into the project directory then run below commands
 ```shell
 runit
+```
+
+- Publish project
+cd into the project directory then run below commands
+```shell
+runit publish
 ```
