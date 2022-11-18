@@ -10,10 +10,9 @@ The Runit Command Line Interface (CLI) Tools can be used to test, manage, and de
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) ![PHP](https://img.shields.io/badge/php-%23777BB4.svg?style=for-the-badge&logo=php&logoColor=white)
 
 ## Installation
- - - -
 ### Python Package
 You can install the Runit CLI using pip (Python package manager). Note that you will need to install [Python](https://python.org).
-To download and install the Firebase CLI run the following command:
+To download and install the runit CLI run the following command:
 ```shell
 pip install runit
 ```
@@ -27,7 +26,6 @@ pip install -e .
 ```
 
 ## Usage
----
 Run the below command to print out usage message.
 ```shell
 runit --help
@@ -65,7 +63,6 @@ runit --function <hello_world> --shell
 ```
 
 ### Publishing Project
----
 Before you can publish any of your projects, you must setup the backend for your runit. You must also be logged in.
 
 **Setup Backend Details**
