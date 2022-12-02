@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VERSION = "0.0.6"
+VERSION = "0.0.8"
 CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
 STARTER_FILES = {'python': 'application.py', 'php': 'index.php','javascript': 'main.js'}

@@ -1,7 +1,7 @@
 from importlib.metadata import entry_points
 from setuptools import setup, find_packages
 
-from .runit.constants import VERSION
+VERSION = '0.0.8'
 
 with open('README.md', 'rt') as file:
     LONG_DESCRIPTION = file.read()
