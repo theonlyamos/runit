@@ -1,7 +1,10 @@
 from importlib.metadata import entry_points
 from setuptools import setup, find_packages
 
-VERSION = '0.0.6'
+from .runit.constants import VERSION
+
+with open('README.md', 'rt') as file:
+    LONG_DESCRIPTION = file.read()
 
 setup(
     name='python-runit',
@@ -9,7 +12,7 @@ setup(
     author='Amos Amissah',
     author_email='theonlyamos@gmail.com',
     description='Develop serverless applications',
-    long_description='Run standalone functions on the web',
+    long_description=LONG_DESCRIPTION,
     packages=find_packages(),
     include_package_data=True,
     install_requires=['requests','python-dotenv','flask','flask-jwt-extended',

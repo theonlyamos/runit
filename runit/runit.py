@@ -4,30 +4,17 @@ import os
 import sys
 import json
 from zipfile import ZipFile
-
-from flask import request
 from io import TextIOWrapper
 
+from flask import request
+from dotenv import load_dotenv
+
 from .languages import LanguageParser
+from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
+        CONFIG_FILE, STARTER_CONFIG_FILE, IS_RUNNING, PROJECTS_DIR, \
+        CURRENT_PROJECT_DIR
 
-
-VERSION = "0.0.6"
-CURRENT_PROJECT = ""
-TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
-STARTER_FILES = {'python': 'application.py', 'php': 'index.php','javascript': 'main.js'}
-EXTENSIONS = {'python': '.py',  'php': '.php', 'javascript': '.js'}
-EXT_TO_LANG = {'.py': 'python', '.php': 'php', '.js': 'javascript'}
-EXT_TO_RUNTIME = {'.py': 'python', '.php': 'php', '.js': 'node'}
-NOT_FOUND_FILE = '404.html'
-CONFIG_FILE = 'runit.json'
-STARTER_CONFIG_FILE = 'runit.json'
-IS_RUNNING = False
-PROJECTS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'projects')
-CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
-BASE_HEADERS = {
-    'Content-Type': 'application/json'
-}
-
+load_dotenv()
 class RunIt:
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
     language="", runtime="", start_file="", author={}, is_file: bool = False):
@@ -127,7 +114,7 @@ class RunIt:
         
         start_file = project.start_file
 
-        lang_parser = LanguageParser.detect_language(start_file, project.runtime)
+        lang_parser = LanguageParser.detect_language(start_file, os.getenv('RUNTIME_'+project.language.upper(), project.runtime))
         lang_parser.current_func = func
         try:
             return getattr(lang_parser, func)(*args_list)

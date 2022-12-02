@@ -12,12 +12,9 @@ from .languages import LanguageParser
 from .modules import Account
 from .runit import RunIt
 
-load_dotenv()
+from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME
 
-VERSION = "0.0.5"
-CURRENT_PROJECT = ""
-CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
-EXT_TO_RUNTIME = {'.py': 'python', '.php': 'php', '.js': 'node'}
+load_dotenv()
 
 def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 5000):
     app = Flask(__name__)
