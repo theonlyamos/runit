@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VERSION = "0.0.8"
+VERSION = "0.0.9"
 CURRENT_PROJECT = ""
 TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
 STARTER_FILES = {'python': 'application.py', 'php': 'index.php','javascript': 'main.js'}
@@ -12,6 +12,8 @@ EXT_TO_LANG = {'.py': 'python', '.php': 'php', '.js': 'javascript'}
 EXT_TO_RUNTIME = {'.py': os.getenv('RUNTIME_PYTHON', 'python'), 
                   '.php': os.getenv('RUNTIME_PHP', 'php'), 
                   '.js': os.getenv('RUNTIME_JAVASCRIPT', 'node')}
+LANGUAGE_TO_RUNTIME = {'python': 'python', 'php': 'php',
+                  'javascript': 'node'}
 NOT_FOUND_FILE = '404.html'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'

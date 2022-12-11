@@ -4,6 +4,7 @@ from .php import PHP
 from .javascript import Javascript
 
 import os
+from typing import Union
 
 class LanguageParser(object):
     '''
@@ -18,7 +19,7 @@ class LanguageParser(object):
         pass
     
     @staticmethod
-    def detect_language(filename: str, runtime: str)-> Type[Python]|Type[PHP]|Type[Javascript]:
+    def detect_language(filename: str, runtime: str)-> Union[Python, PHP, Javascript]:
         return LanguageParser.EXT_TO_LANG[os.path.splitext(filename)[1].lower()](filename, runtime)
 
     @staticmethod

@@ -220,6 +220,35 @@ class Account():
             sys.exit(1)
     
     @staticmethod
+    def clone_project(project: str):
+        '''
+        Clone project to current directory
+        
+        @param files Zipfile of project
+        @param data Project Config
+        @return requests response
+        '''
+        
+        try:
+            global BASE_HEADERS
+            token = load_token()
+
+            BASE_HEADERS['Authorization'] = f"Bearer {token}"
+            
+            url = BASE_API + f'projects/clone/{project}/'
+
+            req = requests.get(PROJECTS_API, headers=BASE_HEADERS)
+            result = req.json()
+
+            if 'msg' in result.keys() and len(result['msg']):
+                raise Exception(f"[Error] {result['msg']}")
+            return result
+
+        except Exception as e:
+            print(str(e))
+            sys.exit(1)
+    
+    @staticmethod
     def create_project(args):
         '''
         Static Method for creating new Project

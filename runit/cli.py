@@ -86,6 +86,13 @@ def run_project(args):
                 print(project.serve(args.function, args.arguments, args.file))
             else:
                 StartWebserver(project, args.host, args.port)
+
+def clone(args):
+    Account.isauthenticated({})
+    user = Account.user()
+    
+    if not os.path.exists(os.path.join(os.path.dirname(os.path.realpath(__file__), args.project_name))):
+        os.mkdir(os.path.join(os.path.dirname(os.path.realpath(__file__), args.project_name)))
             
 def publish(args):
     global CONFIG_FILE
@@ -138,6 +145,9 @@ def publish(args):
         project.homepage = result['homepage']
         project.update_config()
         print('[*] Project config updated')
+        if find_dotenv():
+            print(find_dotenv())
+            set_key(find_dotenv(), 'RUNIT_PROJECT_ID', result['project_id'])
 
     print('[*] Project published successfully')
     print('[!] Access your functions with the urls below:')
@@ -264,6 +274,10 @@ def get_arguments():
 
     publish_parser = subparsers.add_parser('publish', help='Publish current project')
     publish_parser.set_defaults(func=publish)
+    
+    clone_parser = subparsers.add_parser('clone', help='Publish project to current directory')
+    clone_parser.add_argument('project_name', type=str, help='Name of project to clone')
+    clone_parser.set_defaults(func=clone)
     
     parser.add_argument('-f', '--function', default='index', type=str, nargs='?', help='Name of function to run')
     parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')

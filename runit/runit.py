@@ -5,6 +5,7 @@ import sys
 import json
 from zipfile import ZipFile
 from io import TextIOWrapper
+from typing import Optional, Union
 
 from flask import request
 from dotenv import load_dotenv
@@ -86,8 +87,7 @@ class RunIt:
         try:
             if not IS_RUNNING:
                 IS_RUNNING = True
-            else:
-                name = str(input('Enter RunIt Name: '))
+                
             while not name:
                 name = str(input('Enter RunIt Name: '))
             return name
@@ -119,7 +119,8 @@ class RunIt:
         try:
             return getattr(lang_parser, func)(*args_list)
         except AttributeError as e:
-            return f"Function with name '{func}' not defined!"
+            # return f"Function with name '{func}' not defined!"
+            return RunIt.notfound()
         except TypeError as e:
             try:
                 return getattr(lang_parser, func)()
@@ -146,7 +147,7 @@ class RunIt:
         lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         return lang_parser.list_functions()
     
-    def serve(self, func: str = 'index', args: dict|list=None, filename: str = ''):
+    def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None, filename: str = ''):
         global NOT_FOUND_FILE
         global request
 
@@ -214,14 +215,14 @@ class RunIt:
 
         zipname = f'{self.name}.zip'
         exclude_list = [zipname, 'account.db']
+        
         with ZipFile(zipname, 'w') as zipobj:
             print('[!] Compressing Project Files...')
             for folderName, subfolders, filenames in os.walk(os.curdir):
                 for filename in filenames:
                     filepath = os.path.join(folderName,  filename)
-                    #print(filepath)
-                    print(os.path.basename(filepath), zipname, os.path.basename(filepath) != zipname)
-                    if not os.path.basename(filepath) in exclude_list:
+                    
+                    if not os.path.basename(filepath) in exclude_list and not '__pycache__' in folderName:
                         zipobj.write(filepath, filepath)
                         print(f'[{filepath}] Compressed!')
             print(f'[!] Filename: {zipname}')
