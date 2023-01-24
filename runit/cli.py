@@ -91,9 +91,12 @@ def clone(args):
     Account.isauthenticated({})
     user = Account.user()
     
-    if not os.path.exists(os.path.join(os.path.dirname(os.path.realpath(__file__), args.project_name))):
-        os.mkdir(os.path.join(os.path.dirname(os.path.realpath(__file__), args.project_name)))
-            
+    project_path = os.path.join(os.path.basename(os.path.join(os.path.realpath(__file__), args.project_name)))
+    if not os.path.exists(project_path):
+        os.mkdir(project_path)
+    os.chdir(project_path)
+    Account.clone_project(args.project_name)
+        
 def publish(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
