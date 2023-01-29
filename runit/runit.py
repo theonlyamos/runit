@@ -259,6 +259,11 @@ class RunIt:
         '''
 
         if self.language.startswith('python'):
+            with open(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language,
+            'requirements.txt'),'rt') as file:
+                with open(os.path.join(os.curdir, self.name, 'requirements.txt'), 'wt') as starter:
+                    starter.write(file.read())
+                
             PACKAGES_FOLDER = 'packages'
             os.mkdir(os.path.join(os.curdir, self.name, PACKAGES_FOLDER))
             for filename in os.listdir(os.path.abspath(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language, PACKAGES_FOLDER))):

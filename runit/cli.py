@@ -12,7 +12,8 @@ from .languages import LanguageParser
 from .modules import Account
 from .runit import RunIt
 
-from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME
+from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME, \
+                        LANGUAGE_TO_RUNTIME
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 50
         app.add_url_rule('/', view_func=project.serve)
         app.add_url_rule('/<func>', view_func=project.serve)
         app.add_url_rule('/<func>/', view_func=project.serve)
-        app.run(host, port, True)
+        app.run(host, port, False)
     except KeyboardInterrupt:
         sys.exit(1)
     except Exception as e:
@@ -50,7 +51,7 @@ def create_new_project(args):
         config = {}
         config['name'] = args.name
         config['language'] = args.language
-        config['runtime'] = args.runtime
+        config['runtime'] = args.runtime if args.runtime else LANGUAGE_TO_RUNTIME[args.language]
         config['author'] = {}
         config['author']['name'] = getpass.getuser()
         config['author']['email'] = "name@example.com"
@@ -148,14 +149,12 @@ def publish(args):
         project.homepage = result['homepage']
         project.update_config()
         print('[*] Project config updated')
-        if find_dotenv():
-            print(find_dotenv())
-            set_key(find_dotenv(), 'RUNIT_PROJECT_ID', result['project_id'])
+        # if find_dotenv():
+        #     set_key(find_dotenv(), 'RUNIT_PROJECT_ID', result['project_id'])
 
     print('[*] Project published successfully')
     print('[!] Access your functions with the urls below:')
 
-    print(f"[-] {result['homepage']}")
     for func_url in result['functions']:
         print(f"[-] {func_url}")
 

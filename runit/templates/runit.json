@@ -1,0 +1,14 @@
+{
+    "name": "python",
+    "version": "0.0.0",
+    "description": "",
+    "homepage": "",
+    "start_file": "application.py",
+    "author": {
+        "name": "",
+        "email": ""
+    },
+    "runnables": {
+        "python": []
+    }
+}
