@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from .languages import LanguageParser
 from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
         CONFIG_FILE, STARTER_CONFIG_FILE, IS_RUNNING, PROJECTS_DIR, \
-        CURRENT_PROJECT_DIR
+        CURRENT_PROJECT_DIR, DOT_RUNIT_IGNORE
 
 load_dotenv()
 class RunIt:
@@ -38,6 +38,7 @@ class RunIt:
             self.create_folder()
             self.dump_config()
             self.create_starter_files()
+            self.language_depending_packaging()
     
     def __repr__(self):
         return json.dumps(self.config, indent=4)
@@ -216,7 +217,8 @@ class RunIt:
         os.chdir(CURRENT_PROJECT_DIR)
 
         zipname = f'{self.name}.zip'
-        exclude_list = [zipname, 'account.db']
+        ignore_files = os.listdir(os.path.join(TEMPLATES_FOLDER, DOT_RUNIT_IGNORE))
+        exclude_list = [zipname, 'account.db', *ignore_files]
         
         with ZipFile(zipname, 'w') as zipobj:
             print('[!] Compressing Project Files...')
@@ -243,16 +245,15 @@ class RunIt:
         self.config['author'] = self.author
     
     def create_starter_files(self):
+        global DOT_RUNIT_IGNORE
         global TEMPLATES_FOLDER
         global NOT_FOUND_FILE
         
-        LANGUAGE_TEMPLATE_FOLDER = os.path.realpath(os.path.join(TEMPLATES_FOLDER, self.language))
-        LANGUAGE_TEMPLATE_FILES = os.listdir(LANGUAGE_TEMPLATE_FOLDER)
+        self.LANGUAGE_TEMPLATE_FOLDER = os.path.realpath(os.path.join(TEMPLATES_FOLDER, self.language))
+        self.LANGUAGE_TEMPLATE_FILES = os.listdir(self.LANGUAGE_TEMPLATE_FOLDER)
         
-        for template_file in LANGUAGE_TEMPLATE_FILES:
-            print(os.path.join(LANGUAGE_TEMPLATE_FOLDER,
-                template_file))
-            with open(os.path.join(LANGUAGE_TEMPLATE_FOLDER,
+        for template_file in self.LANGUAGE_TEMPLATE_FILES:
+            with open(os.path.join(self.LANGUAGE_TEMPLATE_FOLDER,
                 template_file),'rt') as file:
                 with open(os.path.join(os.curdir, self.name, template_file), 'wt') as starter:
                     starter.write(file.read())
@@ -260,3 +261,71 @@ class RunIt:
         with open(os.path.join(TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
             with open(os.path.join(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error:
                 error.write(file.read())
+        
+        with open(os.path.join(TEMPLATES_FOLDER, DOT_RUNIT_IGNORE),'rt') as file:
+            with open(os.path.join(os.curdir, self.name, DOT_RUNIT_IGNORE), 'wt') as dotrunitignore:
+                dotrunitignore.write(file.read())
+    
+    def language_depending_packaging(self):
+        os.chdir(os.path.join(os.curdir, self.name))
+        packaging_functions = {}
+        packaging_functions['javascript'] = self.update_and_install_package_json
+        packaging_functions['php'] = self.update_and_install_composer_json
+        packaging_functions['python'] = self.install_python_packages
+        
+        packaging_functions[self.language]()
+    
+    def update_and_install_package_json(self):
+        print("[-] Creating and updating package.json")
+        package_file = open('package.json', 'rt')
+        package_details = json.load(package_file)
+        package_file.close()
+        
+        package_details['name'] = self.name
+        package_details['author'] = self.author
+        
+        package_file = open('package.json', 'wt')
+        json.dump(package_details, package_file, indent=4)
+        package_file.close()
+        # try:
+        #     print('[-] Installing node modules...')
+        #     os.system('npm install')
+        # except Exception as e:
+        #     print(str(e))
+        #     print("[!] Couldn't install modules")
+        #     print("[~] Try again manually later.")
+        
+
+    def update_and_install_composer_json(self):
+        print("[-] Creating and updating composer.json")
+        package_file = open('composer.json', 'rt')
+        package_details = json.load(package_file)
+        package_file.close()
+        
+        package_details['name'] = f"runit/{self.name.replace('-', '_')}"
+        package_details['author'] = self.author
+        
+        package_file = open('composer.json', 'wt')
+        json.dump(package_details, package_file, indent=4)
+        package_file.close()
+        # try:
+        #     print('[-] Installing php packages...')
+        #     os.system('composer install')
+        # except Exception as e:
+        #     print(str(e))
+        #     print("[!] Couldn't install packages")
+        #     print("[~] Try again manually later.")
+    
+    def install_python_packages(self):
+        print("[-] Creating virtual environment")
+        os.system(f"{self.runtime} -m venv venv")
+        # try:
+        #     print("[-] Installing python packages")
+        #     activate_install_instructions = f"""
+        #     {os.curdir}\\venv\\Scripts\\pip.exe install -r requirements.txt
+        #     """.strip()
+        #     os.system(activate_install_instructions)
+        # except Exception as e:
+        #     print(str(e))
+        #     print("[!] Couldn't install packages")
+        #     print("[~] Try again manually later.")

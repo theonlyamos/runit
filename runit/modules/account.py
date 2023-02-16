@@ -137,7 +137,7 @@ class Account():
             return result
 
         except Exception as e:
-            print(str(e))
+            #print(str(e))
             return None
   
     @staticmethod

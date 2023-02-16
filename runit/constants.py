@@ -19,6 +19,7 @@ EXT_TO_RUNTIME = {'.py': os.getenv('RUNTIME_PYTHON', 'python'),
 LANGUAGE_TO_RUNTIME = {'python': 'python', 'php': 'php',
                   'javascript': 'node'}
 NOT_FOUND_FILE = '404.html'
+DOT_RUNIT_IGNORE = '.runitignore'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
