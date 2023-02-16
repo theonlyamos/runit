@@ -18,7 +18,7 @@ from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
 load_dotenv()
 class RunIt:
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
-    language="", runtime="", start_file="", author={}, is_file: bool = False):
+    language="", runtime="", start_file="", private=False, author={}, is_file: bool = False):
         global STARTER_FILES
 
         self._id = _id
@@ -28,6 +28,7 @@ class RunIt:
         self.homepage = homepage
         self.language = language
         self.runtime = runtime
+        self.private = private
         self.author = author
         self.config = {}
         self.start_file = start_file if start_file else STARTER_FILES[self.language]
@@ -205,6 +206,7 @@ class RunIt:
         self.config['homepage'] = self.homepage
         self.config['language'] = self.language
         self.config['runtime'] = self.runtime
+        self.config['private'] = self.private
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author
         json.dump(self.config, config_file, indent=4)
@@ -236,6 +238,7 @@ class RunIt:
         self.config['homepage'] = 'https://example.com/project_id/'
         self.config['language'] = self.language
         self.config['runtime'] = self.runtime
+        self.config['private'] = self.private
         self.config['start_file'] = self.start_file
         self.config['author'] = self.author
     
@@ -243,37 +246,17 @@ class RunIt:
         global TEMPLATES_FOLDER
         global NOT_FOUND_FILE
         
-        with open(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language,
-            self.start_file),'rt') as file:
-            with open(os.path.join(os.curdir, self.name, self.start_file), 'wt') as starter:
-                starter.write(file.read())
+        LANGUAGE_TEMPLATE_FOLDER = os.path.realpath(os.path.join(TEMPLATES_FOLDER, self.language))
+        LANGUAGE_TEMPLATE_FILES = os.listdir(LANGUAGE_TEMPLATE_FOLDER)
         
-        with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
+        for template_file in LANGUAGE_TEMPLATE_FILES:
+            print(os.path.join(LANGUAGE_TEMPLATE_FOLDER,
+                template_file))
+            with open(os.path.join(LANGUAGE_TEMPLATE_FOLDER,
+                template_file),'rt') as file:
+                with open(os.path.join(os.curdir, self.name, template_file), 'wt') as starter:
+                    starter.write(file.read())
+            
+        with open(os.path.join(TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
             with open(os.path.join(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error:
                 error.write(file.read())
-        
-        '''
-        with open(os.path.join(os.curdir, 'runit-cli.py'),'rt') as file:
-            with open(os.path.join(os.curdir, self.name, 'runit-cli.py'), 'wt') as client:
-                client.write(file.read())
-        '''
-
-        if self.language.startswith('python'):
-            with open(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language,
-            'requirements.txt'),'rt') as file:
-                with open(os.path.join(os.curdir, self.name, 'requirements.txt'), 'wt') as starter:
-                    starter.write(file.read())
-                
-            PACKAGES_FOLDER = 'packages'
-            os.mkdir(os.path.join(os.curdir, self.name, PACKAGES_FOLDER))
-            for filename in os.listdir(os.path.abspath(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language, PACKAGES_FOLDER))):
-                if os.path.isfile(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language,
-                    PACKAGES_FOLDER, filename)):
-                    with open(os.path.join(os.curdir, TEMPLATES_FOLDER, self.language,
-                        PACKAGES_FOLDER, filename),'rt') as file:
-                        with open(os.path.join(os.curdir, self.name, PACKAGES_FOLDER, filename), 'wt') as package:
-                            package.write(file.read())
-
-
-
-

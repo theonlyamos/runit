@@ -5,6 +5,7 @@
     "homepage": "",
     "language": "python",
     "runtime": "python",
+	"private": false,
     "start_file": "application.py",
     "author": {
         "name": "",

@@ -52,6 +52,7 @@ def create_new_project(args):
         config['name'] = args.name
         config['language'] = args.language
         config['runtime'] = args.runtime if args.runtime else LANGUAGE_TO_RUNTIME[args.language]
+        config['private'] = args.private
         config['author'] = {}
         config['author']['name'] = getpass.getuser()
         config['author']['email'] = "name@example.com"
@@ -220,6 +221,8 @@ def get_arguments():
                         help="Language of the new project")
     new_parser.add_argument('-r','--runtime', type=str,
                         help="Runtime of the project language. E.g: python3.10, node")
+    new_parser.add_argument('--private', action='store_true', 
+                        help="Make project publicly accessible or not. Default is public.")
     new_parser.set_defaults(func=create_new_project)
     
     # run_parser = subparsers.add_parser('run', help='Run current|specified project|function')

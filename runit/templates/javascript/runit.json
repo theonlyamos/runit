@@ -5,6 +5,7 @@
     "homepage": "",
     "language": "javascript",
     "runtime": "node",
+	"private": false,
     "start_file": "main.js",
     "author": {
         "name": "",

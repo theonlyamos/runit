@@ -1,8 +1,9 @@
 {
-    "name": "python",
+    "name": "",
     "version": "0.0.0",
     "description": "",
     "homepage": "",
+	"private": false,
     "start_file": "application.py",
     "author": {
         "name": "",

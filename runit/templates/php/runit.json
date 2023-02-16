@@ -5,6 +5,7 @@
     "homepage": "",
     "language": "php",
     "runtime": "php",
+	"private": false,
     "start_file": "runner.php",
     "author": {
         "name": "",

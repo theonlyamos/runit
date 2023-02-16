@@ -13,7 +13,8 @@ class LanguageParser(object):
     to use
     '''
 
-    EXT_TO_LANG = {'.py': Python, '.php': PHP, '.js': Javascript}
+    EXT_TO_LANG = {'.py': Python, '.php': PHP, '.js': Javascript,
+                   '.jsx': Javascript, '.ts': Javascript, '.tsx': Javascript}
 
     def __init__(self):
         pass
