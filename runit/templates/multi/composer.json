@@ -1,0 +1,12 @@
+{
+    "name": "project_name",
+    "type": "project",
+    "description": "Project Description.",
+    "keywords": ["runit", "php"],
+    "license": "MIT",
+    "require": {
+        "php": "^8.0.2",
+        "theonlyamos/runit": "^7.2"
+    },
+    "prefer-stable": true
+}

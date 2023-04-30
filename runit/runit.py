@@ -96,6 +96,17 @@ class RunIt:
         except KeyboardInterrupt:
             sys.exit(1)
 
+    @classmethod
+    def is_private(cls, project_id: str, projects_folder: str = PROJECTS_DIR)-> bool:
+        global NOT_FOUND_FILE
+
+        os.chdir(projects_folder)
+        
+        if not RunIt.has_config_file():
+            return False
+        
+        project = cls(**RunIt.load_config())
+        return project.private
 
     @classmethod
     def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR):
@@ -152,10 +163,10 @@ class RunIt:
     def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None, filename: str = ''):
         global NOT_FOUND_FILE
         global request
-
-        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
-        lang_parser.current_func = func
         
+        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
+        setattr(lang_parser, 'current_func', func)
+
         if not args and request:
             args = dict(request.args)
 
@@ -164,7 +175,7 @@ class RunIt:
         if type(args) == dict:
             for key, value in args.items():
                 args_list.append(value)
-
+        
         try:
             return getattr(lang_parser, func)(*args_list)
         except AttributeError as e:
@@ -175,6 +186,8 @@ class RunIt:
                 return getattr(lang_parser, func)()
             except TypeError as e:
                 return str(e)
+        except Exception as e:
+            return str(e)
     
     def create_folder(self):
         os.mkdir(os.path.join(os.curdir, self.name))
@@ -187,7 +200,7 @@ class RunIt:
             CONFIG_FILE),'wt')
         else:
             config_file = CONFIG_FILE
-
+        
         json.dump(self.config, config_file, indent=4)
         config_file.close()
 
@@ -217,18 +230,26 @@ class RunIt:
         os.chdir(CURRENT_PROJECT_DIR)
 
         zipname = f'{self.name}.zip'
-        ignore_files = os.listdir(os.path.join(TEMPLATES_FOLDER, DOT_RUNIT_IGNORE))
-        exclude_list = [zipname, 'account.db', *ignore_files]
         
+        exclude_list = [zipname, 'account.db']
+        
+        with open('.runitignore', 'rt') as file:
+            for line in file.readlines():
+                if line:
+                    exclude_list.append(os.path.normpath(line.strip()))
+        
+        del exclude_list[exclude_list.index('.')]
         with ZipFile(zipname, 'w') as zipobj:
             print('[!] Compressing Project Files...')
             for folderName, subfolders, filenames in os.walk(os.curdir):
+                
                 for filename in filenames:
-                    filepath = os.path.join(folderName,  filename)
-                    
-                    if not os.path.basename(filepath) in exclude_list and not '__pycache__' in folderName:
-                        zipobj.write(filepath, filepath)
-                        print(f'[{filepath}] Compressed!')
+                    if not os.path.normpath(os.path.dirname(folderName)).split(os.path.sep)[0] in exclude_list:
+                        filepath = os.path.join(folderName,  filename)
+
+                        if not os.path.basename(filepath) in exclude_list and not '__pycache__' in folderName:
+                            zipobj.write(filepath, filepath)
+                            print(f'[{filepath}] Compressed!')
             print(f'[!] Filename: {zipname}')
         return zipname
 
@@ -267,13 +288,23 @@ class RunIt:
                 dotrunitignore.write(file.read())
     
     def language_depending_packaging(self):
-        os.chdir(os.path.join(os.curdir, self.name))
+        # os.chdir(os.path.join(os.curdir, self.name))
         packaging_functions = {}
         packaging_functions['javascript'] = self.update_and_install_package_json
         packaging_functions['php'] = self.update_and_install_composer_json
         packaging_functions['python'] = self.install_python_packages
-        
+        packaging_functions['multi'] = self.install_all_language_packages
         packaging_functions[self.language]()
+    
+    def install_all_language_packages(self):
+        try:
+            print("[+] Installing all packages...")
+            self.update_and_install_package_json()
+            self.update_and_install_composer_json()
+            self.install_python_packages()
+        except:
+            print("[!] Couldn't install packages")
+            print("[~] Try again manually later.")
     
     def update_and_install_package_json(self):
         print("[-] Creating and updating package.json")
@@ -287,13 +318,13 @@ class RunIt:
         package_file = open('package.json', 'wt')
         json.dump(package_details, package_file, indent=4)
         package_file.close()
-        # try:
-        #     print('[-] Installing node modules...')
-        #     os.system('npm install')
-        # except Exception as e:
-        #     print(str(e))
-        #     print("[!] Couldn't install modules")
-        #     print("[~] Try again manually later.")
+        try:
+            print('[-] Installing node modules...')
+            os.system('npm install')
+        except Exception as e:
+            print(str(e))
+            print("[!] Couldn't install modules")
+            print("[~] Try again manually later.")
         
 
     def update_and_install_composer_json(self):
@@ -318,14 +349,16 @@ class RunIt:
     
     def install_python_packages(self):
         print("[-] Creating virtual environment")
-        os.system(f"{self.runtime} -m venv venv")
-        # try:
-        #     print("[-] Installing python packages")
-        #     activate_install_instructions = f"""
-        #     {os.curdir}\\venv\\Scripts\\pip.exe install -r requirements.txt
-        #     """.strip()
-        #     os.system(activate_install_instructions)
-        # except Exception as e:
-        #     print(str(e))
-        #     print("[!] Couldn't install packages")
-        #     print("[~] Try again manually later.")
+        os.system(f"python -m venv venv")
+        pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
+        try:
+            print("[-] Installing python packages")
+            activate_install_instructions = f"""
+            {pip_path} install -r requirements.txt
+            """.strip()
+            os.system(activate_install_instructions)
+        except Exception as e:
+            print(str(e))
+            print("[!] Couldn't install packages")
+            print("[~] Try again manually later.")
+

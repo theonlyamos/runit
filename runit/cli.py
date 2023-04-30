@@ -217,10 +217,10 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-    new_parser.add_argument('-l', '--language', type=str, choices=['python', 'php', 'javascript'],
-                        help="Language of the new project")
+    new_parser.add_argument('-l', '--language', type=str, choices=['multi' 'python', 'php', 'javascript'],
+                        help="Language of the new project", default="multi")
     new_parser.add_argument('-r','--runtime', type=str,
-                        help="Runtime of the project language. E.g: python3.10, node")
+                        help="Runtime of the project language. E.g: python3.11, node, php8")
     new_parser.add_argument('--private', action='store_true', 
                         help="Make project publicly accessible or not. Default is public.")
     new_parser.set_defaults(func=create_new_project)
