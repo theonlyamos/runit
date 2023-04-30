@@ -1,14 +1,15 @@
 {
-    "name": "php",
+    "name": "",
     "version": "0.0.0",
     "description": "",
     "homepage": "",
-    "language": "php",
-    "runtime": "php",
 	"private": false,
-    "start_file": "runner.php",
+    "start_file": "application.py",
     "author": {
         "name": "",
         "email": ""
+    },
+    "runnables": {
+        "python": []
     }
 }

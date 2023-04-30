@@ -1,6 +1,7 @@
 from typing import Type
-from .python import Python
 from .php import PHP
+from .multi import Multi
+from .python import Python
 from .javascript import Javascript
 
 import os
@@ -13,13 +14,16 @@ class LanguageParser(object):
     to use
     '''
 
-    EXT_TO_LANG = {'.py': Python, '.php': PHP, '.js': Javascript}
+    EXT_TO_LANG = {'.py': Python, '.php': PHP, '.js': Javascript,
+                   '.jsx': Javascript, '.ts': Javascript, '.tsx': Javascript}
 
     def __init__(self):
         pass
     
     @staticmethod
     def detect_language(filename: str, runtime: str)-> Union[Python, PHP, Javascript]:
+        if runtime == 'multi':
+            return Multi(filename, runtime)
         return LanguageParser.EXT_TO_LANG[os.path.splitext(filename)[1].lower()](filename, runtime)
 
     @staticmethod

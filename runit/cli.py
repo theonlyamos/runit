@@ -12,7 +12,8 @@ from .languages import LanguageParser
 from .modules import Account
 from .runit import RunIt
 
-from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME
+from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME, \
+                        LANGUAGE_TO_RUNTIME
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 50
         app.add_url_rule('/', view_func=project.serve)
         app.add_url_rule('/<func>', view_func=project.serve)
         app.add_url_rule('/<func>/', view_func=project.serve)
-        app.run(host, port, True)
+        app.run(host, port, False)
     except KeyboardInterrupt:
         sys.exit(1)
     except Exception as e:
@@ -50,7 +51,8 @@ def create_new_project(args):
         config = {}
         config['name'] = args.name
         config['language'] = args.language
-        config['runtime'] = args.runtime
+        config['runtime'] = args.runtime if args.runtime else LANGUAGE_TO_RUNTIME[args.language]
+        config['private'] = args.private
         config['author'] = {}
         config['author']['name'] = getpass.getuser()
         config['author']['email'] = "name@example.com"
@@ -91,9 +93,12 @@ def clone(args):
     Account.isauthenticated({})
     user = Account.user()
     
-    if not os.path.exists(os.path.join(os.path.dirname(os.path.realpath(__file__), args.project_name))):
-        os.mkdir(os.path.join(os.path.dirname(os.path.realpath(__file__), args.project_name)))
-            
+    project_path = os.path.join(os.path.basename(os.path.join(os.path.realpath(__file__), args.project_name)))
+    if not os.path.exists(project_path):
+        os.mkdir(project_path)
+    os.chdir(project_path)
+    Account.clone_project(args.project_name)
+        
 def publish(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
@@ -145,14 +150,12 @@ def publish(args):
         project.homepage = result['homepage']
         project.update_config()
         print('[*] Project config updated')
-        if find_dotenv():
-            print(find_dotenv())
-            set_key(find_dotenv(), 'RUNIT_PROJECT_ID', result['project_id'])
+        # if find_dotenv():
+        #     set_key(find_dotenv(), 'RUNIT_PROJECT_ID', result['project_id'])
 
     print('[*] Project published successfully')
     print('[!] Access your functions with the urls below:')
 
-    print(f"[-] {result['homepage']}")
     for func_url in result['functions']:
         print(f"[-] {func_url}")
 
@@ -214,10 +217,12 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-    new_parser.add_argument('-l', '--language', type=str, choices=['python', 'php', 'javascript'],
-                        help="Language of the new project")
+    new_parser.add_argument('-l', '--language', type=str, choices=['multi' 'python', 'php', 'javascript'],
+                        help="Language of the new project", default="multi")
     new_parser.add_argument('-r','--runtime', type=str,
-                        help="Runtime of the project language. E.g: python3.10, node")
+                        help="Runtime of the project language. E.g: python3.11, node, php8")
+    new_parser.add_argument('--private', action='store_true', 
+                        help="Make project publicly accessible or not. Default is public.")
     new_parser.set_defaults(func=create_new_project)
     
     # run_parser = subparsers.add_parser('run', help='Run current|specified project|function')

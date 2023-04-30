@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
 import os
-
+from datetime import datetime, timedelta
 from subprocess import check_output
-from typing import Any
+
+from dotenv import load_dotenv
+from ..constants import EXT_TO_RUNTIME
 
 load_dotenv()
 
@@ -16,16 +16,17 @@ class Runtime(object):
     RUNNER = ""
     
     def __init__(self, filename="", runtime="", is_file = False):
+        extension = os.path.splitext(filename)[1].lower()
         self.filename = filename
         self.runtime = runtime
         self.is_file = is_file
         self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
         self.functions = []
-        self.load_functions_from_file()
+        self.load_functions_from_supported_files()
     
-    def load_functions_from_file(self):
+    def load_functions_from_supported_files(self):
         '''
-        Class method for retrieving exported
+        Class method for loading exported
         function names in .js file
 
         @param None
@@ -33,10 +34,8 @@ class Runtime(object):
         '''
         
         try:
-            command = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True)
-            result = str(command)
-            result = result.lstrip("b'").lstrip('"').replace('\\n', '\n').replace('\\r', '\r').rstrip("'").rstrip('"').strip()
-            
+            result = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
+            result = result.strip()
             if self.runtime == 'php':
                 self.functions = result.split(',')
             else:
@@ -48,7 +47,7 @@ class Runtime(object):
         except Exception as e:
             print(str(e))
             return str(e)
-
+        
     def list_functions(self):
         '''
         List Class methods
@@ -65,14 +64,13 @@ class Runtime(object):
                 if self.is_file:
                     return os.system(f'{self.runtime} {self.filename} "{args}"')
                 else:
-                    command = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func} "{args}"', shell=True)
+                    result = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func} "{args}"', shell=True, encoding='utf-8')
             else:
                 if self.is_file:
                     return os.system(f'{self.runtime} {self.filename}')
                 else:
-                    command = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func}', shell=True)
+                    result = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func}', shell=True, encoding='utf-8')
 
-            result = str(command)
-            return result.lstrip("b'").replace('\\n', '\n').replace('\\r', '\r').rstrip("'").strip()
+            return result.strip()
         except Exception as e:
             return str(e)

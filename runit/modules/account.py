@@ -137,7 +137,7 @@ class Account():
             return result
 
         except Exception as e:
-            print(str(e))
+            #print(str(e))
             return None
   
     @staticmethod
@@ -237,7 +237,8 @@ class Account():
             
             url = BASE_API + f'projects/clone/{project}/'
 
-            req = requests.get(PROJECTS_API, headers=BASE_HEADERS)
+            req = requests.get(url, headers=BASE_HEADERS)
+            print(req.headers)
             result = req.json()
 
             if 'msg' in result.keys() and len(result['msg']):

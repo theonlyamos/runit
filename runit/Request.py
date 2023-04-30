@@ -1,8 +1,9 @@
 import requests
+import os
 
 class Request:
     def __init__(self):
-        req = requests.get('http://localhost:9000/get_app_requests/', headers={'Accept': 'application/json'})
+        req = requests.get(os.getenv('RUNIT_SERVERNAME', 'localhost:9000')+'get_app_requests/', headers={'Accept': 'application/json'})
         self.parameters = req.json()
 
     def args(self):
