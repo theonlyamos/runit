@@ -3,9 +3,9 @@ import sys
 import shelve
 import getpass
 import argparse
-from typing import Type
+from typing import Type, Optional
 
-from flask import Flask, request
+from fastapi import FastAPI, Request
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
 
 from .languages import LanguageParser
@@ -18,17 +18,31 @@ from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUN
 load_dotenv()
 
 def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 5000):
-    app = Flask(__name__)
-    app.secret = "fdakfjlfdsaflfkjbasdoiefanckdareafasdfkowadbfakidfadfkj"
+    app = FastAPI()
+    app.secret_key = "fdakfjlfdsaflfkjbasdoiefanckdareafasdfkowadbfakidfadfkj"
+    
+    @app.api_route('/')
+    @app.api_route('/{func}')
+    @app.api_route('/{func}/')
+    async def serve(func: Optional[str], request: Request):
+        if request.method.lower() in ['get', 'post']:
+            func = func if func else 'index'
+            params = list(request.query_params.values())
+            return project.serve(func, params) \
+                if len(params) else project.serve(func)
+        return 'MethodNodAllowed'
+
+    
     try:
-        app.add_url_rule('/', view_func=project.serve)
-        app.add_url_rule('/<func>', view_func=project.serve)
-        app.add_url_rule('/<func>/', view_func=project.serve)
-        app.run(host, port, False)
+        import uvicorn
+        uvicorn.run(app, host=host, port=port)
     except KeyboardInterrupt:
+        import sys
         sys.exit(1)
     except Exception as e:
         print(e)
+        import sys
+        sys.exit(1)
 
 def create_new_project(args):
     global CONFIG_FILE

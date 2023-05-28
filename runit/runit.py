@@ -162,19 +162,14 @@ class RunIt:
     
     def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None, filename: str = ''):
         global NOT_FOUND_FILE
-        global request
         
         lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         setattr(lang_parser, 'current_func', func)
 
-        if not args and request:
-            args = dict(request.args)
-
-        args_list = args if type(args) == list else []
-        
         if type(args) == dict:
-            for key, value in args.items():
-                args_list.append(value)
+            args = list(args.values())
+
+        args_list = args if type(args) == list  else []
         
         try:
             return getattr(lang_parser, func)(*args_list)

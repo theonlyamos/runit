@@ -1,7 +1,7 @@
 from importlib.metadata import entry_points
 from setuptools import setup, find_packages
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 
 with open('README.md', 'rt') as file:
     LONG_DESCRIPTION = file.read()
@@ -15,8 +15,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['requests','python-dotenv','flask','flask-jwt-extended',
-    'flask-restful'],
+    install_requires=['requests','python-dotenv','fastapi','passlib'],
     keywords='python3 runit developer serverless architecture docker',
     project_urls={
         'Source': 'https://github.com/theonlyamos/runit/',
