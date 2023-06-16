@@ -13,6 +13,7 @@ setup(
     author_email='theonlyamos@gmail.com',
     description='Develop serverless applications',
     long_description=LONG_DESCRIPTION,
+    long_description_content_type = "text/markdown",
     packages=find_packages(),
     include_package_data=True,
     install_requires=['requests','python-dotenv','fastapi','passlib'],
