@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 CURRENT_PROJECT = ""
 NOT_FOUND_FILE = '404.html'
 DOT_RUNIT_IGNORE = '.runitignore'
@@ -11,9 +11,10 @@ CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
 CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
-TOOLS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tools')
-PROJECTS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'projects')
-TEMPLATES_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
+RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
+TOOLS_DIR = os.path.join(RUNIT_HOMEDIR, 'tools')
+PROJECTS_DIR = os.path.join(RUNIT_HOMEDIR, 'projects')
+TEMPLATES_FOLDER = os.path.join(RUNIT_HOMEDIR, 'templates')
 
 EXT_TO_LOADER = {
     '.py': os.path.join(TOOLS_DIR, 'python', 'loader.py'),

@@ -13,7 +13,7 @@ from .modules import Account
 from .runit import RunIt
 
 from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME, \
-                        LANGUAGE_TO_RUNTIME
+                        LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR
 
 load_dotenv()
 
@@ -31,7 +31,6 @@ def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 50
             return project.serve(func, params) \
                 if len(params) else project.serve(func)
         return 'MethodNodAllowed'
-
     
     try:
         import uvicorn
@@ -180,13 +179,19 @@ def setup_runit(args):
     @params args
     @return None
     '''
+    if not find_dotenv():
+        with open(os.path.join(RUNIT_HOMEDIR, '.env'), 'wt') as env_file:
+            pass
+        set_key(find_dotenv(), 'RUNIT_API_ENDPOINT', '')
+        set_key(find_dotenv(), 'RUNIT_PROJECT_ID', '')
+        
     settings = dotenv_values(find_dotenv())
     
     if args.api:
         settings['RUNIT_API_ENDPOINT'] = args.api
     else:
         for key, value in settings.items():
-            new_value = input(f'{key} [{value}]: ')
+            new_value = input(f'{key} [{value}]: ').strip()
             if new_value:
                 settings[key] = new_value 
             else:
