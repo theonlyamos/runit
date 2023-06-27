@@ -237,13 +237,14 @@ class Account():
             
             url = BASE_API + f'projects/clone/{project}/'
 
-            req = requests.get(url, headers=BASE_HEADERS)
-            print(req.headers)
-            result = req.json()
+            response = requests.get(url, headers=BASE_HEADERS)
 
-            if 'msg' in result.keys() and len(result['msg']):
-                raise Exception(f"[Error] {result['msg']}")
-            return result
+            if (response.headers['Content-Type'] == 'application/json'):
+                result = response.json()
+
+                if 'msg' in result.keys() and len(result['msg']):
+                    raise Exception(f"[Error] {result['msg']}")
+            return response.content
 
         except Exception as e:
             print(str(e))

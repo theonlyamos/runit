@@ -4,6 +4,7 @@ import shelve
 import getpass
 import argparse
 from typing import Type, Optional
+from threading import Thread
 
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
@@ -103,14 +104,26 @@ def run_project(args):
                 StartWebserver(project, args.host, args.port)
 
 def clone(args):
+    CURDIR = os.path.realpath(os.curdir)
     Account.isauthenticated({})
     user = Account.user()
     
-    project_path = os.path.join(os.path.basename(os.path.join(os.path.realpath(__file__), args.project_name)))
+    project_path = os.path.join(CURDIR, args.project_name)
     if not os.path.exists(project_path):
         os.mkdir(project_path)
+
+    print(f'[+] Cloning project into {args.project_name}...')
+    downloaded_file = Account.clone_project(args.project_name)
+
+    filepath = os.path.join(project_path, f"{args.project_name}.zip")
+    with open(filepath, 'wb') as zip_file:
+        zip_file.write(downloaded_file)
+    print('[!] Cloning complete')
+    RunIt.extract_project(filepath)
     os.chdir(project_path)
-    Account.clone_project(args.project_name)
+    runit = RunIt(**RunIt.load_config())
+    print(runit)
+    Thread(target=runit.install_dependency_packages, args=()).start()
         
 def publish(args):
     global CONFIG_FILE

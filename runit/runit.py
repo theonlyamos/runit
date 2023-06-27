@@ -6,6 +6,7 @@ import json
 from zipfile import ZipFile
 from io import TextIOWrapper
 from typing import Optional, Union
+from threading import Thread
 
 from flask import request
 from dotenv import load_dotenv
@@ -38,7 +39,8 @@ class RunIt:
             self.create_folder()
             self.dump_config()
             self.create_starter_files()
-            self.language_depending_packaging()
+            packages_install_thread = Thread(target=self.install_dependency_packages, args=())
+            packages_install_thread.start()
     
     def __repr__(self):
         return json.dumps(self.config, indent=4)
@@ -222,18 +224,20 @@ class RunIt:
         config_file.close()
     
     def compress(self):
-        os.chdir(CURRENT_PROJECT_DIR)
-
+        # os.chdir(CURRENT_PROJECT_DIR)
         zipname = f'{self.name}.zip'
         
-        exclude_list = [zipname, 'account.db']
+        exclude_list = [zipname, 'account.db', '.git', '.venv', 'venv']
         
-        with open('.runitignore', 'rt') as file:
-            for line in file.readlines():
-                if line:
-                    exclude_list.append(os.path.normpath(line.strip()))
+        if '.runitignore' in os.listdir():
+            with open('.runitignore', 'rt') as file:
+                for line in file.readlines():
+                    if line:
+                        exclude_list.append(os.path.normpath(line.strip()))
         
-        del exclude_list[exclude_list.index('.')]
+        if '.' in exclude_list:
+            del exclude_list[exclude_list.index('.')]
+
         with ZipFile(zipname, 'w') as zipobj:
             print('[!] Compressing Project Files...')
             for folderName, subfolders, filenames in os.walk(os.curdir):
@@ -282,7 +286,7 @@ class RunIt:
             with open(os.path.join(os.curdir, self.name, DOT_RUNIT_IGNORE), 'wt') as dotrunitignore:
                 dotrunitignore.write(file.read())
     
-    def language_depending_packaging(self):
+    def install_dependency_packages(self):
         # os.chdir(os.path.join(os.curdir, self.name))
         packaging_functions = {}
         packaging_functions['javascript'] = self.update_and_install_package_json
@@ -331,9 +335,9 @@ class RunIt:
         package_details['name'] = f"runit/{self.name.replace('-', '_')}"
         package_details['author'] = self.author
         
-        package_file = open('composer.json', 'wt')
-        json.dump(package_details, package_file, indent=4)
-        package_file.close()
+        with open('composer.json', 'wt') as package_file:
+            json.dump(package_details, package_file, indent=4)
+
         # try:
         #     print('[-] Installing php packages...')
         #     os.system('composer install')
@@ -346,6 +350,8 @@ class RunIt:
         print("[-] Creating virtual environment")
         os.system(f"python -m venv venv")
         pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
+        if sys.platform != 'win32':
+            pip_path = f".\{os.path.join(os.curdir, 'venv', 'bin', 'pip')}"
         try:
             print("[-] Installing python packages")
             activate_install_instructions = f"""
