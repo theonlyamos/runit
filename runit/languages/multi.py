@@ -14,8 +14,8 @@ class Multi(Runtime):
     LOADER = os.path.realpath(os.path.join(MULTI_TOOLS_DIR, 'loader.py'))
     RUNNER = os.path.realpath(os.path.join(MULTI_TOOLS_DIR, 'runner.py'))
 
-    def __init__(self, filename, runtime):
-        super().__init__(filename, runtime)
+    def __init__(self, filename, runtime, is_file, is_docker, project_id):
+        super().__init__(filename, runtime, is_file, is_docker, project_id)
     
     def load_files(self)-> list[str]:
         '''

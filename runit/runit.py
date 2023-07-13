@@ -5,7 +5,7 @@ import sys
 import json
 from zipfile import ZipFile
 from io import TextIOWrapper
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 from threading import Thread
 
 from flask import request
@@ -18,6 +18,9 @@ from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
 
 load_dotenv()
 class RunIt:
+    DOCKER = False
+    KUBERNETES = False
+
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
     language="", runtime="", start_file="", private=False, author={}, is_file: bool = False):
         global STARTER_FILES
@@ -97,6 +100,69 @@ class RunIt:
             return name
         except KeyboardInterrupt:
             sys.exit(1)
+    
+    @staticmethod
+    def notfound():
+        global TEMPLATES_FOLDER
+        global NOT_FOUND_FILE
+
+        with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
+            return file.read()
+    
+    @staticmethod
+    def extract_project(filepath):
+        directory, filename = os.path.split(filepath)
+    
+        with ZipFile(filepath, 'r') as file:
+            file.extractall(directory)
+        os.unlink(filepath)
+    
+    def get_functions(self)->list:
+        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime, RunIt.DOCKER, self._id)
+        return lang_parser.list_functions()
+    
+    @staticmethod
+    def dockerize(project_path: str):
+        '''
+        Create docker image for project
+
+        @params project_path
+        @return None
+        '''
+        try:
+            import docker
+
+            client = docker.from_env()
+
+            project_id = os.path.split(project_path)[-1]
+            print(f"[-] Building image for {project_id}")
+
+            image = client.images.build(
+                path=project_path,
+                tag=project_id,
+            )
+            print(image)
+
+        except ImportError:
+            print('[!] Docker package not installed.')
+            print('[-] Use `pip install docker` to install the package.')
+            sys.exit(1)
+        except Exception as e:
+            print(str(e))
+            sys.exit(1)
+    
+    @staticmethod
+    def run_background_task(target: Callable, *args: list):
+        '''
+        Runction for running threads
+
+        @param target Function to run
+        @param args Arguments for the function
+        @return None
+        '''
+        bg_thread = Thread(target=target, args=(args))
+        bg_thread.start()
+        bg_thread.join()
 
     @classmethod
     def is_private(cls, project_id: str, projects_folder: str = PROJECTS_DIR)-> bool:
@@ -129,7 +195,7 @@ class RunIt:
         
         start_file = project.start_file
 
-        lang_parser = LanguageParser.detect_language(start_file, os.getenv('RUNTIME_'+project.language.upper(), project.runtime))
+        lang_parser = LanguageParser.detect_language(start_file, os.getenv('RUNTIME_'+project.language.upper(), project.runtime), RunIt.DOCKER, project_id)
         lang_parser.current_func = func
         try:
             return getattr(lang_parser, func)(*args_list)
@@ -141,26 +207,6 @@ class RunIt:
                 return getattr(lang_parser, func)()
             except TypeError as e:
                 return str(e)
-    
-    @staticmethod
-    def notfound():
-        global TEMPLATES_FOLDER
-        global NOT_FOUND_FILE
-
-        with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
-            return file.read()
-    
-    @staticmethod
-    def extract_project(filepath):
-        directory, filename = os.path.split(filepath)
-    
-        with ZipFile(filepath, 'r') as file:
-            file.extractall(directory)
-        os.unlink(filepath)
-    
-    def get_functions(self)->list:
-        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
-        return lang_parser.list_functions()
     
     def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None, filename: str = ''):
         global NOT_FOUND_FILE
@@ -227,7 +273,7 @@ class RunIt:
         # os.chdir(CURRENT_PROJECT_DIR)
         zipname = f'{self.name}.zip'
         
-        exclude_list = [zipname, 'account.db', '.git', '.venv', 'venv']
+        exclude_list = [zipname, 'account.db', '.git', '.venv', 'venv', 'Dockerfile']
         
         if '.runitignore' in os.listdir():
             with open('.runitignore', 'rt') as file:
@@ -362,4 +408,5 @@ class RunIt:
             print(str(e))
             print("[!] Couldn't install packages")
             print("[~] Try again manually later.")
+    
 

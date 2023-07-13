@@ -12,5 +12,5 @@ class Javascript(Runtime):
     LOADER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'loader.js'))
     RUNNER = os.path.realpath(os.path.join(JS_TOOLS_DIR, 'runner.js'))
     
-    def __init__(self, filename, runtime):
-        super().__init__(filename, runtime)
+    def __init__(self, filename, runtime, is_file, is_docker, project_id):
+        super().__init__(filename, runtime, is_file, is_docker, project_id)

@@ -15,11 +15,13 @@ class Runtime(object):
     LOADER = ""
     RUNNER = ""
     
-    def __init__(self, filename="", runtime="", is_file = False):
+    def __init__(self, filename="", runtime="", is_file = False, is_docker=False, project_id=''):
         extension = os.path.splitext(filename)[1].lower()
         self.filename = filename
         self.runtime = runtime
         self.is_file = is_file
+        self.is_docker = is_docker
+        self.project_id = project_id
         self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
         self.functions = []
         self.load_functions_from_supported_files()
@@ -34,7 +36,15 @@ class Runtime(object):
         '''
         
         try:
-            result = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
+            if self.is_docker:
+                import docker
+                client = docker.from_env()
+
+                print(f"{self.project_id} {self.LOADER} {self.module}")
+                result = client.containers.run(self.project_id, f'{self.LOADER} {self.module}', auto_remove=True)
+                print(result)
+            else:
+                result = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
             result = result.strip()
             if self.runtime == 'php':
                 self.functions = result.split(',')

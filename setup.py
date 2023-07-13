@@ -1,7 +1,7 @@
 from importlib.metadata import entry_points
 from setuptools import setup, find_packages
 
-VERSION = '0.2.2'
+VERSION = '0.2.3'
 
 with open('README.md', 'rt') as file:
     LONG_DESCRIPTION = file.read()
@@ -16,7 +16,7 @@ setup(
     long_description_content_type = "text/markdown",
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['requests','python-dotenv','fastapi','passlib'],
+    install_requires=['requests','python-dotenv','fastapi','passlib', 'docker'],
     keywords='python3 runit developer serverless architecture docker',
     project_urls={
         'Source': 'https://github.com/theonlyamos/runit/',
