@@ -336,7 +336,9 @@ class RunIt:
                 dotrunitignore.write(file.read())
     
     def install_dependency_packages(self):
-        project_path = os.path.realpath(os.path.join(os.curdir, self.name))
+        global PROJECTS_DIR
+        
+        project_path = os.path.realpath(os.path.join(PROJECTS_DIR, self.name))
         if project_path != os.path.realpath(os.curdir):
             os.chdir(project_path)
         packaging_functions = {}
