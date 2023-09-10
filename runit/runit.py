@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from .languages import LanguageParser
 from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
         CONFIG_FILE, STARTER_CONFIG_FILE, IS_RUNNING, PROJECTS_DIR, \
-        CURRENT_PROJECT_DIR, DOT_RUNIT_IGNORE
+        CURRENT_PROJECT_DIR, DOT_RUNIT_IGNORE, INSTALL_MODULE_LATER_MESSAGE
 
 load_dotenv()
 class RunIt:
@@ -22,7 +22,7 @@ class RunIt:
     KUBERNETES = False
 
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
-    language="", runtime="", start_file="", private=False, author={}, is_file: bool = False):
+    language="", runtime="", start_file="", private=False, author=None, is_file: bool = False):
         global STARTER_FILES
 
         self._id = _id
@@ -102,16 +102,19 @@ class RunIt:
             sys.exit(1)
     
     @staticmethod
-    def notfound():
+    def notfound(format='json'):
         global TEMPLATES_FOLDER
         global NOT_FOUND_FILE
+
+        if format == 'json':
+            return '404 - Not Found'
 
         with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
             return file.read()
     
     @staticmethod
     def extract_project(filepath):
-        directory, filename = os.path.split(filepath)
+        directory = os.path.split(filepath)[0]
     
         with ZipFile(filepath, 'r') as file:
             file.extractall(directory)
@@ -200,7 +203,6 @@ class RunIt:
         try:
             return getattr(lang_parser, func)(*args_list)
         except AttributeError as e:
-            # return f"Function with name '{func}' not defined!"
             return RunIt.notfound()
         except TypeError as e:
             try:
@@ -208,7 +210,7 @@ class RunIt:
             except TypeError as e:
                 return str(e)
     
-    def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None, filename: str = ''):
+    def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
         
         lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
@@ -223,7 +225,6 @@ class RunIt:
             return getattr(lang_parser, func)(*args_list)
         except AttributeError as e:
             return RunIt.notfound()
-            # return f"Function with name '{func}' not defined!"
         except TypeError as e:
             try:
                 return getattr(lang_parser, func)()
@@ -286,13 +287,12 @@ class RunIt:
 
         with ZipFile(zipname, 'w') as zipobj:
             print('[!] Compressing Project Files...')
-            for folderName, subfolders, filenames in os.walk(os.curdir):
-                
+            for folder_name, subfolders, filenames in os.walk(os.curdir):
                 for filename in filenames:
-                    if not os.path.normpath(os.path.dirname(folderName)).split(os.path.sep)[0] in exclude_list:
-                        filepath = os.path.join(folderName,  filename)
+                    if os.path.normpath(os.path.dirname(folder_name)).split(os.path.sep)[0] not in exclude_list:
+                        filepath = os.path.join(folder_name,  filename)
 
-                        if not os.path.basename(filepath) in exclude_list and not '__pycache__' in folderName:
+                        if os.path.basename(filepath) not in exclude_list and '__pycache__' not in folder_name:
                             zipobj.write(filepath, filepath)
                             print(f'[{filepath}] Compressed!')
             print(f'[!] Filename: {zipname}')
@@ -303,7 +303,7 @@ class RunIt:
         self.config['name'] = self.name
         self.config['version'] = self.version
         self.config['description'] = self.description
-        self.config['homepage'] = 'https://example.com/project_id/'
+        self.config['homepage'] = 'http://example.com/project_id/'
         self.config['language'] = self.language
         self.config['runtime'] = self.runtime
         self.config['private'] = self.private
@@ -319,21 +319,26 @@ class RunIt:
         self.LANGUAGE_TEMPLATE_FILES = os.listdir(self.LANGUAGE_TEMPLATE_FOLDER)
         
         for template_file in self.LANGUAGE_TEMPLATE_FILES:
-            with open(os.path.join(self.LANGUAGE_TEMPLATE_FOLDER,
-                template_file),'rt') as file:
-                with open(os.path.join(os.curdir, self.name, template_file), 'wt') as starter:
-                    starter.write(file.read())
+            if os.path.isfile(os.path.join(self.LANGUAGE_TEMPLATE_FOLDER,template_file)):
+                with open(os.path.join(self.LANGUAGE_TEMPLATE_FOLDER,
+                    template_file),'rt') as file:
+                    with open(os.path.join(os.curdir, 
+                                           self.name, 
+                                           template_file), 'wt') as starter:
+                        starter.write(file.read())
             
         with open(os.path.join(TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
-            with open(os.path.join(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error:
-                error.write(file.read())
+            with open(os.path.join(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error_404:
+                error_404.write(file.read())
         
         with open(os.path.join(TEMPLATES_FOLDER, DOT_RUNIT_IGNORE),'rt') as file:
             with open(os.path.join(os.curdir, self.name, DOT_RUNIT_IGNORE), 'wt') as dotrunitignore:
                 dotrunitignore.write(file.read())
     
     def install_dependency_packages(self):
-        # os.chdir(os.path.join(os.curdir, self.name))
+        project_path = os.path.realpath(os.path.join(os.curdir, self.name))
+        if project_path != os.path.realpath(os.curdir):
+            os.chdir(project_path)
         packaging_functions = {}
         packaging_functions['javascript'] = self.update_and_install_package_json
         packaging_functions['php'] = self.update_and_install_composer_json
@@ -347,9 +352,9 @@ class RunIt:
             self.update_and_install_package_json()
             self.update_and_install_composer_json()
             self.install_python_packages()
-        except:
+        except Exception:
             print("[!] Couldn't install packages")
-            print("[~] Try again manually later.")
+            print(INSTALL_MODULE_LATER_MESSAGE)
     
     def update_and_install_package_json(self):
         print("[-] Creating and updating package.json")
@@ -369,7 +374,7 @@ class RunIt:
         except Exception as e:
             print(str(e))
             print("[!] Couldn't install modules")
-            print("[~] Try again manually later.")
+            print(INSTALL_MODULE_LATER_MESSAGE)
         
 
     def update_and_install_composer_json(self):
@@ -390,23 +395,25 @@ class RunIt:
         # except Exception as e:
         #     print(str(e))
         #     print("[!] Couldn't install packages")
-        #     print("[~] Try again manually later.")
+        #     print(INSTALL_MODULE_LATER_MESSAGE)
     
     def install_python_packages(self):
-        print("[-] Creating virtual environment")
-        os.system(f"python -m venv venv")
+        print("[-] Creating virtual environment...", end='\r')
+        os.system("python -m venv venv")
+        print("[+] Creating virtual environment - done", end='\n')
         pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
         if sys.platform != 'win32':
             pip_path = f".\{os.path.join(os.curdir, 'venv', 'bin', 'pip')}"
         try:
-            print("[-] Installing python packages")
+            print("[-] Installing python packages...", end="\r")
             activate_install_instructions = f"""
             {pip_path} install -r requirements.txt
             """.strip()
             os.system(activate_install_instructions)
+            print("[+] Installing python packages - done", end="\n")
         except Exception as e:
             print(str(e))
             print("[!] Couldn't install packages")
-            print("[~] Try again manually later.")
+            print(INSTALL_MODULE_LATER_MESSAGE)
     
 

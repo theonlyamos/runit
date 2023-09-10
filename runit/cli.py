@@ -3,6 +3,7 @@ import sys
 import shelve
 import getpass
 import argparse
+import asyncio
 from typing import Type, Optional
 from threading import Thread
 
@@ -16,11 +17,11 @@ from .modules import Account
 from .runit import RunIt
 
 from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME, \
-                        LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR
+                        LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR, SERVER_HOST, SERVER_PORT
 
 load_dotenv()
 
-def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 5000):
+def StartWebserver(project: RunIt, host: str = SERVER_HOST, port: int = SERVER_PORT):
     app = FastAPI()
     app.secret_key = "fdakfjlfdsaflfkjbasdoiefanckdareafasdfkowadbfakidfadfkj"
     
@@ -30,39 +31,36 @@ def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 50
     @app.api_route('/{func}/{output_format}', methods=["GET", "POST"])
     @app.api_route('/{func}/{output_format}/', methods=["GET", "POST"])
     async def serve(func: str = 'index', output_format: str = 'json', request: Request = None):
+        response = {'status': True, 'data': {}}
+        result = ''
         try:
-            response = {'status': True, 'data': {}}
-            result = ''
+            parameters = request.query_params._dict
+            if 'content-type' in request.headers.keys() and request.headers['content-type'] == "application/json":
+                data = await request.json()
+                parameters = {**parameters, **data}
+            
+            if 'output_format' in parameters.keys():
+                del parameters['output_format']
 
-            if request.method.lower() in ['get', 'post']:
-                parameters = request.query_params._dict
-                if 'content-type' in request.headers.keys() and request.headers['content-type'] == "application/json":
-                    data = await request.json()
-                    parameters = {**parameters, **data}
-                
-                if 'output_format' in parameters.keys():
-                    del parameters['output_format']
+            params = list(parameters.values()) if request else request
+            result = project.serve(func, params) \
+                if len(params) else project.serve(func)
+            
+            if result.startswith('404'):
+                raise RuntimeError('Not Found')
+            if output_format == 'html':
+                return HTMLResponse(result)
+            else:
+                response['data'] = json.loads(result.replace("'", '"'))
+                return response
 
-                params = list(parameters.values()) if request else request
-                result = project.serve(func, params) \
-                    if len(params) else project.serve(func)
-                
-                if output_format == 'html':
-                    return HTMLResponse(result)
-                else:
-                    response['data'] = json.loads(result.replace("'", '"'))
-                    return response
-                
-            response['status': False]
-            response['message'] = 'Method Not Allowed'
-            return 'MethodNodAllowed' if output_format == 'html' \
-            else response
         except json.decoder.JSONDecodeError:
-            return result
-        except:
-            response['status': False]
-            response['message'] = 'Not Found'
-            return HTMLResponse(RunIt.notfound()) if \
+            response['data'] = result
+            return response
+        except Exception:
+            response['status'] = False
+            response['message'] = RunIt.notfound(output_format)
+            return HTMLResponse(RunIt.notfound(output_format)) if \
                 output_format == 'html' else response
     
     try:
@@ -134,7 +132,7 @@ def run_project(args):
             project = RunIt(**RunIt.load_config())
 
             if args.shell:
-                print(project.serve(args.function, args.arguments, args.file))
+                print(project.serve(args.function, args.arguments))
             else:
                 StartWebserver(project, args.host, args.port)
 
