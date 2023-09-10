@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VERSION = "0.2.2"
+VERSION = "0.2.6"
 CURRENT_PROJECT = ""
 NOT_FOUND_FILE = '404.html'
 DOT_RUNIT_IGNORE = '.runitignore'
@@ -12,9 +12,12 @@ STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
 CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
 RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
+RUNIT_WORKDIR = os.getenv('RUNIT_WORKDIR', os.path.join(os.path.expanduser('~'), 'RUNIT_WORKDIR'))
 TOOLS_DIR = os.path.join(RUNIT_HOMEDIR, 'tools')
-PROJECTS_DIR = os.path.join(RUNIT_HOMEDIR, 'projects')
+PROJECTS_DIR = os.path.join(RUNIT_WORKDIR, 'projects')
 TEMPLATES_FOLDER = os.path.join(RUNIT_HOMEDIR, 'templates')
+SERVER_HOST = '0.0.0.0'
+SERVER_PORT = 9000
 
 EXT_TO_LOADER = {
     '.py': os.path.join(TOOLS_DIR, 'python', 'loader.py'),
@@ -47,3 +50,5 @@ EXT_TO_RUNTIME = {'.py': LANGUAGE_TO_RUNTIME['python'],
 BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
+
+INSTALL_MODULE_LATER_MESSAGE = '[~] Try again manually later.'

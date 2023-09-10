@@ -14,7 +14,7 @@ The Runit Command Line Interface (CLI) Tools can be used to test, manage, and de
 You can install the Runit CLI using pip (Python package manager). Note that you will need to install [Python](https://python.org).
 To download and install the runit CLI run the following command:
 ```shell
-pip install runit
+pip install python-runit
 ```
 This will provide you with the globally accessible ```runit``` command.
 
@@ -22,7 +22,7 @@ This will provide you with the globally accessible ```runit``` command.
 ```shell
 git clone https://github.com/theonlyamos/runit.git
 cd runit
-pip install -e .
+pip install .
 ```
 
 ## Usage

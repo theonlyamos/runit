@@ -11,5 +11,5 @@ class PHP(Runtime):
     LOADER = os.path.realpath(os.path.join(PHP_TOOLS_DIR, 'loader.php'))
     RUNNER = os.path.realpath(os.path.join(PHP_TOOLS_DIR, 'runner.php'))
     
-    def __init__(self, filename, runtime):
-        super().__init__(filename, runtime)
+    def __init__(self, filename, runtime, is_file, is_docker, project_id):
+        super().__init__(filename, runtime, is_file, is_docker, project_id)

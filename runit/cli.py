@@ -3,35 +3,65 @@ import sys
 import shelve
 import getpass
 import argparse
+import asyncio
 from typing import Type, Optional
 from threading import Thread
 
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
+import json
 
 from .languages import LanguageParser
 from .modules import Account
 from .runit import RunIt
 
 from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME, \
-                        LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR
+                        LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR, SERVER_HOST, SERVER_PORT
 
 load_dotenv()
 
-def StartWebserver(project: Type[RunIt], host: str = '127.0.0.1', port: int = 5000):
+def StartWebserver(project: RunIt, host: str = SERVER_HOST, port: int = SERVER_PORT):
     app = FastAPI()
     app.secret_key = "fdakfjlfdsaflfkjbasdoiefanckdareafasdfkowadbfakidfadfkj"
     
-    @app.api_route('/')
-    @app.api_route('/{func}')
-    @app.api_route('/{func}/')
-    async def serve(func: Optional[str], request: Request):
-        if request.method.lower() in ['get', 'post']:
-            func = func if func else 'index'
-            params = list(request.query_params.values())
-            return project.serve(func, params) \
+    @app.api_route('/', methods=["GET", "POST"])
+    @app.api_route('/{func}', methods=["GET", "POST"])
+    @app.api_route('/{func}/', methods=["GET", "POST"])
+    @app.api_route('/{func}/{output_format}', methods=["GET", "POST"])
+    @app.api_route('/{func}/{output_format}/', methods=["GET", "POST"])
+    async def serve(func: str = 'index', output_format: str = 'json', request: Request = None):
+        response = {'status': True, 'data': {}}
+        result = ''
+        try:
+            parameters = request.query_params._dict
+            if 'content-type' in request.headers.keys() and request.headers['content-type'] == "application/json":
+                data = await request.json()
+                parameters = {**parameters, **data}
+            
+            if 'output_format' in parameters.keys():
+                del parameters['output_format']
+
+            params = list(parameters.values()) if request else request
+            result = project.serve(func, params) \
                 if len(params) else project.serve(func)
-        return 'MethodNodAllowed'
+            
+            if result.startswith('404'):
+                raise RuntimeError('Not Found')
+            if output_format == 'html':
+                return HTMLResponse(result)
+            else:
+                response['data'] = json.loads(result.replace("'", '"'))
+                return response
+
+        except json.decoder.JSONDecodeError:
+            response['data'] = result
+            return response
+        except Exception:
+            response['status'] = False
+            response['message'] = RunIt.notfound(output_format)
+            return HTMLResponse(RunIt.notfound(output_format)) if \
+                output_format == 'html' else response
     
     try:
         import uvicorn
@@ -86,6 +116,9 @@ def run_project(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
     
+    RunIt.DOCKER = args.docker
+    RunIt.KUBERNETES = args.kubernetes
+    
     if not CONFIG_FILE and not args.file:
         raise FileNotFoundError
     else:
@@ -99,7 +132,7 @@ def run_project(args):
             project = RunIt(**RunIt.load_config())
 
             if args.shell:
-                print(project.serve(args.function, args.arguments, args.file))
+                print(project.serve(args.function, args.arguments))
             else:
                 StartWebserver(project, args.host, args.port)
 
@@ -249,7 +282,7 @@ def get_arguments():
     new_parser = subparsers.add_parser('new', help='Create new project or function')
     new_parser.add_argument("name", type=str, nargs="?", 
                         help="Name of the new project")          
-    new_parser.add_argument('-l', '--language', type=str, choices=['multi' 'python', 'php', 'javascript'],
+    new_parser.add_argument('-l', '--language', type=str, choices=['multi', 'python', 'php', 'javascript'],
                         help="Language of the new project", default="multi")
     new_parser.add_argument('-r','--runtime', type=str,
                         help="Runtime of the project language. E.g: python3.11, node, php8")
@@ -316,6 +349,8 @@ def get_arguments():
     clone_parser.add_argument('project_name', type=str, help='Name of project to clone')
     clone_parser.set_defaults(func=clone)
     
+    parser.add_argument('--docker', action='store_true', help="Run program in docker container")
+    parser.add_argument('--kubernetes', action='store_true', help="Run program using kubernetes")
     parser.add_argument('-f', '--function', default='index', type=str, nargs='?', help='Name of function to run')
     parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')
     parser.add_argument('--shell', action='store_true', help='Run function only in shell')
