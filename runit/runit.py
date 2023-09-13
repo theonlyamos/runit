@@ -405,7 +405,7 @@ class RunIt:
         print("[+] Creating virtual environment - done", end='\n')
         pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
         if sys.platform != 'win32':
-            pip_path = f".\{os.path.join(os.curdir, 'venv', 'bin', 'pip')}"
+            pip_path = f"./{os.path.realpath(os.path.join(os.curdir, 'venv', 'bin', 'pip'))}"
         try:
             print("[-] Installing python packages...", end="\r")
             activate_install_instructions = f"""
