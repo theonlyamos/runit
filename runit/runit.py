@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import logging
 from zipfile import ZipFile
 from io import TextIOWrapper
 from typing import Optional, Union, Callable
@@ -15,8 +16,14 @@ from .languages import LanguageParser
 from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
         CONFIG_FILE, STARTER_CONFIG_FILE, IS_RUNNING, PROJECTS_DIR, \
         CURRENT_PROJECT_DIR, DOT_RUNIT_IGNORE, INSTALL_MODULE_LATER_MESSAGE
+        
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%d-%b-%y %H:%M:%S'
+)
 
 load_dotenv()
+
 class RunIt:
     DOCKER = False
     KUBERNETES = False
@@ -138,20 +145,20 @@ class RunIt:
             client = docker.from_env()
 
             project_id = os.path.split(project_path)[-1]
-            print(f"[-] Building image for {project_id}")
+            logging.info(f"[-] Building image for {project_id}")
 
             image = client.images.build(
                 path=project_path,
                 tag=project_id,
             )
-            print(image)
+            logging.info(image)
 
         except ImportError:
-            print('[!] Docker package not installed.')
-            print('[-] Use `pip install docker` to install the package.')
+            logging.warning('[!] Docker package not installed.')
+            logging.debug('[-] Use `pip install docker` to install the package.')
             sys.exit(1)
         except Exception as e:
-            print(str(e))
+            logging.exception(str(e))
             sys.exit(1)
     
     @staticmethod
@@ -286,7 +293,7 @@ class RunIt:
             del exclude_list[exclude_list.index('.')]
 
         with ZipFile(zipname, 'w') as zipobj:
-            print('[!] Compressing Project Files...')
+            logging.info('[!] Compressing Project Files...')
             for folder_name, subfolders, filenames in os.walk(os.curdir):
                 for filename in filenames:
                     if os.path.normpath(os.path.dirname(folder_name)).split(os.path.sep)[0] not in exclude_list:
@@ -294,8 +301,8 @@ class RunIt:
 
                         if os.path.basename(filepath) not in exclude_list and '__pycache__' not in folder_name:
                             zipobj.write(filepath, filepath)
-                            print(f'[{filepath}] Compressed!')
-            print(f'[!] Filename: {zipname}')
+                            logging.info(f'[{filepath}] Compressed!')
+            logging.info(f'[!] Filename: {zipname}')
         return zipname
 
     def create_config(self):
@@ -350,16 +357,16 @@ class RunIt:
     
     def install_all_language_packages(self):
         try:
-            print("[+] Installing all packages...")
+            logging.info("[+] Installing all packages...")
             self.update_and_install_package_json()
             self.update_and_install_composer_json()
             self.install_python_packages()
         except Exception:
-            print("[!] Couldn't install packages")
-            print(INSTALL_MODULE_LATER_MESSAGE)
+            logging.warning("[!] Couldn't install packages")
+            logging.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def update_and_install_package_json(self):
-        print("[-] Creating and updating package.json")
+        logging.info("[-] Creating and updating package.json")
         package_file = open('package.json', 'rt')
         package_details = json.load(package_file)
         package_file.close()
@@ -371,16 +378,16 @@ class RunIt:
         json.dump(package_details, package_file, indent=4)
         package_file.close()
         try:
-            print('[-] Installing node modules...')
+            logging.info('[-] Installing node modules...')
             os.system('npm install')
         except Exception as e:
-            print(str(e))
-            print("[!] Couldn't install modules")
-            print(INSTALL_MODULE_LATER_MESSAGE)
+            logging.exception(str(e))
+            logging.error("[!] Couldn't install modules")
+            logging.debug(INSTALL_MODULE_LATER_MESSAGE)
         
 
     def update_and_install_composer_json(self):
-        print("[-] Creating and updating composer.json")
+        logging.info("[-] Creating and updating composer.json")
         package_file = open('composer.json', 'rt')
         package_details = json.load(package_file)
         package_file.close()
@@ -392,30 +399,30 @@ class RunIt:
             json.dump(package_details, package_file, indent=4)
 
         # try:
-        #     print('[-] Installing php packages...')
+        #     logging.info('[-] Installing php packages...')
         #     os.system('composer install')
         # except Exception as e:
-        #     print(str(e))
-        #     print("[!] Couldn't install packages")
-        #     print(INSTALL_MODULE_LATER_MESSAGE)
+        #     logging.exception(str(e))
+        #     logging.error("[!] Couldn't install packages")
+        #     logging.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def install_python_packages(self):
-        print("[-] Creating virtual environment...", end='\r')
+        logging.info("[-] Creating virtual environment...", end='\r')
         os.system("python -m venv venv")
-        print("[+] Creating virtual environment - done", end='\n')
+        logging.info("[+] Creating virtual environment - done", end='\n')
         pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
         if sys.platform != 'win32':
             pip_path = f"./{os.path.realpath(os.path.join(os.curdir, 'venv', 'bin', 'pip'))}"
         try:
-            print("[-] Installing python packages...", end="\r")
+            logging.info("[-] Installing python packages...", end="\r")
             activate_install_instructions = f"""
             {pip_path} install -r requirements.txt
             """.strip()
             os.system(activate_install_instructions)
-            print("[+] Installing python packages - done", end="\n")
+            logging.info("[+] Installing python packages - done", end="\n")
         except Exception as e:
-            print(str(e))
-            print("[!] Couldn't install packages")
-            print(INSTALL_MODULE_LATER_MESSAGE)
+            logging.exception(str(e))
+            logging.error("[!] Couldn't install packages")
+            logging.debug(INSTALL_MODULE_LATER_MESSAGE)
     
 
