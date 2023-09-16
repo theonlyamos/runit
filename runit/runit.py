@@ -13,20 +13,29 @@ from flask import request
 from dotenv import load_dotenv
 
 from .languages import LanguageParser
-from .constants import TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE, \
-        CONFIG_FILE, STARTER_CONFIG_FILE, IS_RUNNING, PROJECTS_DIR, \
-        CURRENT_PROJECT_DIR, DOT_RUNIT_IGNORE, INSTALL_MODULE_LATER_MESSAGE
-        
-logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%d-%b-%y %H:%M:%S'
+from .constants import (
+    TEMPLATES_FOLDER, STARTER_FILES, NOT_FOUND_FILE,
+    CONFIG_FILE, STARTER_CONFIG_FILE, IS_RUNNING, PROJECTS_DIR,
+    CURRENT_PROJECT_DIR, DOT_RUNIT_IGNORE, INSTALL_MODULE_LATER_MESSAGE
 )
+ 
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    datefmt='%d-%b-%y %H:%M:%S',
+    level=logging.DEBUG
+)
+logger = logging.getLogger('runit.log')
 
 load_dotenv()
 
 class RunIt:
     DOCKER = False
     KUBERNETES = False
+    RUNTIME_ENV = os.getenv('RUNIT_RUNTIME', 'client')
+    PYTHON_PATHS = {
+        'win32': os.path.join(os.curdir, 'venv', 'Scripts', 'python.exe'),
+        'linux': os.path.join(os.curdir, 'venv', 'bin', 'python')
+    }
 
     def __init__(self, name, _id="", version="0.0.1", description="", homepage="",
     language="", runtime="", start_file="", private=False, author=None, is_file: bool = False):
@@ -51,6 +60,11 @@ class RunIt:
             self.create_starter_files()
             packages_install_thread = Thread(target=self.install_dependency_packages, args=())
             packages_install_thread.start()
+        
+        self.PYTHON_PATHS = {
+            'win32': os.path.join(os.curdir, 'venv', 'Scripts', 'python.exe'),
+            'linux': os.path.join(os.curdir, 'venv', 'bin', 'python')
+        }
     
     def __repr__(self):
         return json.dumps(self.config, indent=4)
@@ -128,7 +142,15 @@ class RunIt:
         os.unlink(filepath)
     
     def get_functions(self)->list:
-        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime, RunIt.DOCKER, self._id)
+        if 'python' in self.runtime:
+            self.runtime = os.path.realpath(self.PYTHON_PATHS[sys.platform])
+        
+        lang_parser = LanguageParser.detect_language(
+            filename=self.start_file, 
+            runtime=self.runtime, 
+            is_docker=RunIt.DOCKER, 
+            project_id=self._id
+        )
         return lang_parser.list_functions()
     
     @staticmethod
@@ -145,20 +167,20 @@ class RunIt:
             client = docker.from_env()
 
             project_id = os.path.split(project_path)[-1]
-            logging.info(f"[-] Building image for {project_id}")
+            logger.info(f"[-] Building image for {project_id}")
 
             image = client.images.build(
                 path=project_path,
                 tag=project_id,
             )
-            logging.info(image)
+            logger.info(image)
 
         except ImportError:
-            logging.warning('[!] Docker package not installed.')
-            logging.debug('[-] Use `pip install docker` to install the package.')
+            logger.warning('[!] Docker package not installed.')
+            logger.debug('[-] Use `pip install docker` to install the package.')
             sys.exit(1)
         except Exception as e:
-            logging.exception(str(e))
+            logger.exception(str(e))
             sys.exit(1)
     
     @staticmethod
@@ -196,6 +218,10 @@ class RunIt:
             return RunIt.notfound()
         
         project = cls(**RunIt.load_config())
+        
+        
+        if 'python' in project.runtime:
+            project.runtime = cls.PYTHON_PATHS[sys.platform]
 
         args = request.args
         
@@ -205,7 +231,12 @@ class RunIt:
         
         start_file = project.start_file
 
-        lang_parser = LanguageParser.detect_language(start_file, os.getenv('RUNTIME_'+project.language.upper(), project.runtime), RunIt.DOCKER, project_id)
+        lang_parser = LanguageParser.detect_language(
+            filename=start_file, 
+            runtime=os.getenv('RUNTIME_'+project.language.upper(), project.runtime), 
+            is_docker=RunIt.DOCKER, 
+            project_id=project_id
+        )
         lang_parser.current_func = func
         try:
             return getattr(lang_parser, func)(*args_list)
@@ -220,13 +251,16 @@ class RunIt:
     def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
         
+        if 'python' in self.runtime:
+            self.runtime = self.PYTHON_PATHS[sys.platform]
+        
         lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         setattr(lang_parser, 'current_func', func)
 
-        if type(args) == dict:
+        if type(args) is dict:
             args = list(args.values())
 
-        args_list = args if type(args) == list  else []
+        args_list = args if type(args) is list  else []
         
         try:
             return getattr(lang_parser, func)(*args_list)
@@ -277,32 +311,31 @@ class RunIt:
         json.dump(self.config, config_file, indent=4)
         config_file.close()
     
+    def get_exclude_list(self):
+        exclude_list = [self.name + '.zip', 'account.db', '.git', '.venv', 'venv', 'Dockerfile']
+        
+        if os.path.exists(DOT_RUNIT_IGNORE):
+            with open(DOT_RUNIT_IGNORE, 'rt') as file:
+                exclude_list.extend(os.path.normpath(line.strip()) for line in file if line.strip())
+        
+        exclude_list = [item for item in exclude_list if item != '.']
+        return exclude_list
+    
     def compress(self):
-        # os.chdir(CURRENT_PROJECT_DIR)
         zipname = f'{self.name}.zip'
-        
-        exclude_list = [zipname, 'account.db', '.git', '.venv', 'venv', 'Dockerfile']
-        
-        if '.runitignore' in os.listdir():
-            with open('.runitignore', 'rt') as file:
-                for line in file.readlines():
-                    if line:
-                        exclude_list.append(os.path.normpath(line.strip()))
-        
-        if '.' in exclude_list:
-            del exclude_list[exclude_list.index('.')]
+        exclude_list = self.get_exclude_list()
 
         with ZipFile(zipname, 'w') as zipobj:
-            logging.info('[!] Compressing Project Files...')
+            logger.info('[!] Compressing Project Files...')
             for folder_name, subfolders, filenames in os.walk(os.curdir):
-                for filename in filenames:
-                    if os.path.normpath(os.path.dirname(folder_name)).split(os.path.sep)[0] not in exclude_list:
-                        filepath = os.path.join(folder_name,  filename)
-
+                if any(os.path.normpath(os.path.dirname(folder_name)).split(os.path.sep)[0] not in exclude_list for filename in filenames):
+                    for filename in filenames:
+                        filepath = os.path.join(folder_name, filename)
                         if os.path.basename(filepath) not in exclude_list and '__pycache__' not in folder_name:
                             zipobj.write(filepath, filepath)
-                            logging.info(f'[{filepath}] Compressed!')
-            logging.info(f'[!] Filename: {zipname}')
+                            logger.info(f'[{filepath}] Compressed!')
+            logger.info(f'[!] Filename: {zipname}')
+            
         return zipname
 
     def create_config(self):
@@ -344,8 +377,11 @@ class RunIt:
     
     def install_dependency_packages(self):
         global PROJECTS_DIR
+
+        project_path = os.path.realpath(os.path.join(os.curdir, self.name))
+        if RunIt.RUNTIME_ENV == 'server':
+            project_path = os.path.realpath(os.path.join(PROJECTS_DIR, self._id))
         
-        project_path = os.path.realpath(os.path.join(PROJECTS_DIR, self.name))
         if project_path != os.path.realpath(os.curdir):
             os.chdir(project_path)
         packaging_functions = {}
@@ -357,16 +393,16 @@ class RunIt:
     
     def install_all_language_packages(self):
         try:
-            logging.info("[+] Installing all packages...")
+            logger.info("[+] Installing all packages...")
             self.update_and_install_package_json()
             self.update_and_install_composer_json()
             self.install_python_packages()
         except Exception:
-            logging.warning("[!] Couldn't install packages")
-            logging.debug(INSTALL_MODULE_LATER_MESSAGE)
+            logger.warning("[!] Couldn't install packages")
+            logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def update_and_install_package_json(self):
-        logging.info("[-] Creating and updating package.json")
+        logger.info("[-] Creating and updating package.json")
         package_file = open('package.json', 'rt')
         package_details = json.load(package_file)
         package_file.close()
@@ -378,16 +414,16 @@ class RunIt:
         json.dump(package_details, package_file, indent=4)
         package_file.close()
         try:
-            logging.info('[-] Installing node modules...')
+            logger.info('[-] Installing node modules...')
             os.system('npm install')
         except Exception as e:
-            logging.exception(str(e))
-            logging.error("[!] Couldn't install modules")
-            logging.debug(INSTALL_MODULE_LATER_MESSAGE)
+            logger.exception(str(e))
+            logger.error("[!] Couldn't install modules")
+            logger.debug(INSTALL_MODULE_LATER_MESSAGE)
         
 
     def update_and_install_composer_json(self):
-        logging.info("[-] Creating and updating composer.json")
+        logger.info("[-] Creating and updating composer.json")
         package_file = open('composer.json', 'rt')
         package_details = json.load(package_file)
         package_file.close()
@@ -399,30 +435,32 @@ class RunIt:
             json.dump(package_details, package_file, indent=4)
 
         # try:
-        #     logging.info('[-] Installing php packages...')
+        #     logger.info('[-] Installing php packages...')
         #     os.system('composer install')
         # except Exception as e:
-        #     logging.exception(str(e))
-        #     logging.error("[!] Couldn't install packages")
-        #     logging.debug(INSTALL_MODULE_LATER_MESSAGE)
+        #     logger.exception(str(e))
+        #     logger.error("[!] Couldn't install packages")
+        #     logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def install_python_packages(self):
-        logging.info("[-] Creating virtual environment...", end='\r')
+        logger.info("[-] Creating virtual environment...")
+        
         os.system("python -m venv venv")
-        logging.info("[+] Creating virtual environment - done", end='\n')
+        logger.info("[+] Created virtual environment")
         pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
+        
         if sys.platform != 'win32':
-            pip_path = f"./{os.path.realpath(os.path.join(os.curdir, 'venv', 'bin', 'pip'))}"
+            pip_path = f"{os.path.realpath(os.path.join(os.curdir, 'venv', 'bin', 'pip'))}"
         try:
-            logging.info("[-] Installing python packages...", end="\r")
+            logger.info("[-] Installing python packages...")
             activate_install_instructions = f"""
             {pip_path} install -r requirements.txt
             """.strip()
             os.system(activate_install_instructions)
-            logging.info("[+] Installing python packages - done", end="\n")
+            logger.info("[+] Installed python packages")
         except Exception as e:
-            logging.exception(str(e))
-            logging.error("[!] Couldn't install packages")
-            logging.debug(INSTALL_MODULE_LATER_MESSAGE)
+            logger.exception(str(e))
+            logger.error("[!] Couldn't install packages")
+            logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
 

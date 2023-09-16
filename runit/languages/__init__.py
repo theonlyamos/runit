@@ -7,7 +7,7 @@ from .javascript import Javascript
 import os
 from typing import Union
 
-class LanguageParser(object):
+class LanguageParser():
     '''
     Class for parsing script language.
     Determines which language paackage
@@ -16,9 +16,6 @@ class LanguageParser(object):
 
     EXT_TO_LANG = {'.py': Python, '.php': PHP, '.js': Javascript,
                    '.jsx': Javascript, '.ts': Javascript, '.tsx': Javascript}
-
-    def __init__(self):
-        pass
     
     @staticmethod
     def detect_language(filename: str, runtime: str, is_file: bool = False, is_docker: bool = False, project_id: str = '')-> Union[Python, PHP, Javascript, Multi]:

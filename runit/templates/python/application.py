@@ -9,9 +9,9 @@ def counter():
 def printout(string):
     print(string)
 
-def time():
-    from datetime import datetime
-    print((datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S"))
+def gettime():
+    import time
+    print(time.ctime())
 
 def quote():
     from collections import namedtuple

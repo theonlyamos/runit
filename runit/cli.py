@@ -3,7 +3,8 @@ import sys
 import shelve
 import getpass
 import argparse
-import asyncio
+import logging
+from pathlib import Path
 from typing import Type, Optional
 from threading import Thread
 
@@ -15,67 +16,53 @@ import json
 from .languages import LanguageParser
 from .modules import Account
 from .runit import RunIt
+from .constants import (
+    VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR,
+    EXT_TO_RUNTIME, LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR,
+    SERVER_HOST, SERVER_PORT, CONFIG_FILE
+)
+from .exceptions import (
+    ProjectExistsError,
+    ProjectNameNotSpecified
+)
+from .core import WebServer
 
-from .constants import VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR, EXT_TO_RUNTIME, \
-                        LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR, SERVER_HOST, SERVER_PORT
+      
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    datefmt='%d-%b-%y %H:%M:%S',
+    level=logging.DEBUG
+)
+logger = logging.getLogger('runit.log') 
 
 load_dotenv()
 
-def StartWebserver(project: RunIt, host: str = SERVER_HOST, port: int = SERVER_PORT):
-    app = FastAPI()
-    app.secret_key = "fdakfjlfdsaflfkjbasdoiefanckdareafasdfkowadbfakidfadfkj"
-    
-    @app.api_route('/', methods=["GET", "POST"])
-    @app.api_route('/{func}', methods=["GET", "POST"])
-    @app.api_route('/{func}/', methods=["GET", "POST"])
-    @app.api_route('/{func}/{output_format}', methods=["GET", "POST"])
-    @app.api_route('/{func}/{output_format}/', methods=["GET", "POST"])
-    async def serve(func: str = 'index', output_format: str = 'json', request: Request = None):
-        response = {'status': True, 'data': {}}
-        result = ''
-        try:
-            parameters = request.query_params._dict
-            if 'content-type' in request.headers.keys() and request.headers['content-type'] == "application/json":
-                data = await request.json()
-                parameters = {**parameters, **data}
-            
-            if 'output_format' in parameters.keys():
-                del parameters['output_format']
+def start_webserver(project: RunIt, host: str = SERVER_HOST, port: int = SERVER_PORT):
+    web_server = WebServer(project)
+    web_server.start(host, port)
 
-            params = list(parameters.values()) if request else request
-            result = project.serve(func, params) \
-                if len(params) else project.serve(func)
-            
-            if result.startswith('404'):
-                raise RuntimeError('Not Found')
-            if output_format == 'html':
-                return HTMLResponse(result)
-            else:
-                response['data'] = json.loads(result.replace("'", '"'))
-                return response
-
-        except json.decoder.JSONDecodeError:
-            response['data'] = result
-            return response
-        except Exception:
-            response['status'] = False
-            response['message'] = RunIt.notfound(output_format)
-            return HTMLResponse(RunIt.notfound(output_format)) if \
-                output_format == 'html' else response
+def create_config(args):
+    config = {}
+    config['name'] = args.name
+    config['language'] = args.language
+    config['runtime'] = args.runtime if args.runtime else LANGUAGE_TO_RUNTIME[args.language]
+    config['private'] = args.private
+    config['author'] = {}
+    config['author']['name'] = getpass.getuser()
+    config['author']['email'] = "name@example.com"
     
-    try:
-        import uvicorn
-        uvicorn.run(app, host=host, port=port)
-    except KeyboardInterrupt:
-        import sys
-        sys.exit(1)
-    except Exception as e:
-        print(e)
-        import sys
-        sys.exit(1)
+    user = Account.user()
+    os.chdir(CURRENT_PROJECT_DIR)
+    if user is not None:
+        config['author']['name'] = user['name']
+        config['author']['email'] = user['email']
+    
+    return config
+
+def create_project(config):
+    return RunIt(**config)
 
 def create_new_project(args):
-    global CONFIG_FILE
     global CURRENT_PROJECT
     '''
     Method for creating new project or
@@ -84,33 +71,19 @@ def create_new_project(args):
     @param args Arguments from argparse
     @return None
     '''
-    
-    if args.name:
-        name = RunIt.set_project_name(args.name)
-        if RunIt.exists(name):
-            print(f'{name} project already Exists')
-            sys.exit(1)
-        
-        CONFIG_FILE = 'runit.json'
-        config = {}
-        config['name'] = args.name
-        config['language'] = args.language
-        config['runtime'] = args.runtime if args.runtime else LANGUAGE_TO_RUNTIME[args.language]
-        config['private'] = args.private
-        config['author'] = {}
-        config['author']['name'] = getpass.getuser()
-        config['author']['email'] = "name@example.com"
-        
-        user = Account.user()
-        os.chdir(CURRENT_PROJECT_DIR)
-        if user is not None:
-            config['author']['name'] = user['name']
-            config['author']['email'] = user['email']
-        
-        CURRENT_PROJECT = RunIt(**config)
-        print(CURRENT_PROJECT)
-    else:
-        print('Project name not specified')
+    try:
+        if args.name:
+            name = RunIt.set_project_name(args.name)
+            if RunIt.exists(name):
+                raise ProjectExistsError(f'{name} project already exists')
+
+            config = create_config(args)
+            CURRENT_PROJECT = create_project(config)
+            logging.info(CURRENT_PROJECT)
+        else:
+            raise ProjectNameNotSpecified('Project name not specified')
+    except Exception as e:
+        logger.error(str(e))
 
 def run_project(args):
     global CONFIG_FILE
@@ -134,7 +107,7 @@ def run_project(args):
             if args.shell:
                 print(project.serve(args.function, args.arguments))
             else:
-                StartWebserver(project, args.host, args.port)
+                start_webserver(project, args.host, args.port)
 
 def clone(args):
     CURDIR = os.path.realpath(os.curdir)
@@ -220,32 +193,35 @@ def publish(args):
 
 def setup_runit(args):
     '''
-    Setup Runit server side api
+    Setup Runit server side api settings
     
     @params args
     @return None
     '''
-    if not find_dotenv():
-        with open(os.path.join(RUNIT_HOMEDIR, '.env'), 'wt') as env_file:
-            pass
-        set_key(find_dotenv(), 'RUNIT_API_ENDPOINT', '')
-        set_key(find_dotenv(), 'RUNIT_PROJECT_ID', '')
+    try:
+        if not find_dotenv():
+            env_path = Path(RUNIT_HOMEDIR) / '.env'
+            env_path.touch()
+            set_key(find_dotenv(), 'RUNIT_API_ENDPOINT', '')
+            set_key(find_dotenv(), 'RUNIT_PROJECT_ID', '')
+            
+        settings = dotenv_values(find_dotenv())
         
-    settings = dotenv_values(find_dotenv())
-    
-    if args.api:
-        settings['RUNIT_API_ENDPOINT'] = args.api
-    else:
+        if args.api:
+            settings['RUNIT_API_ENDPOINT'] = args.api
+        else:
+            for key, value in settings.items():
+                new_value = input(f'{key} [{value}]: ').strip()
+                if new_value:
+                    settings[key] = new_value 
+                else:
+                    logger.debug(f'{key} cannot be empty')
+                    logger.info(f'Setting {key} to default [{value}]')
+        
         for key, value in settings.items():
-            new_value = input(f'{key} [{value}]: ').strip()
-            if new_value:
-                settings[key] = new_value 
-            else:
-                print(f'{key} cannot be empty')
-                print(f'Setting {key} to default [{value}]')
-    
-    for key, value in settings.items():
-        set_key(find_dotenv(), key, value)
+            set_key(find_dotenv(), key, value)
+    except Exception as e:
+        logger.error(str(e))
 
 def load_token(access_token = None):
     with shelve.open('account') as account:
@@ -270,7 +246,7 @@ def get_functions(args):
     project = RunIt(**config)
     print(project.get_functions())
 
-def print_help(args):
+def print_help():
     global parser
     parser.print_help()
 

@@ -7,7 +7,7 @@ from ..constants import EXT_TO_RUNTIME
 
 load_dotenv()
 
-class Runtime(object):
+class Runtime():
     '''
     Class for parsing and running
     functions from file
@@ -16,7 +16,7 @@ class Runtime(object):
     RUNNER = ""
     
     def __init__(self, filename="", runtime="", is_file = False, is_docker=False, project_id=''):
-        extension = os.path.splitext(filename)[1].lower()
+        # extension = os.path.splitext(filename)[1].lower()
         self.filename = filename
         self.runtime = runtime
         self.is_file = is_file
@@ -29,7 +29,7 @@ class Runtime(object):
     def load_functions_from_supported_files(self):
         '''
         Class method for loading exported
-        function names in .js file
+        function names in application files
 
         @param None
         @return None
@@ -45,7 +45,9 @@ class Runtime(object):
                 print(result)
             else:
                 result = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
+            
             result = result.strip()
+            
             if self.runtime == 'php':
                 self.functions = result.split(',')
             else:
