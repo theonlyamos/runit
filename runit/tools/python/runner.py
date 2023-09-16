@@ -9,8 +9,8 @@ try:
     if len(args) >= 3:
         filename = args[1]
         functionname = args[2]
-
-        sys.path.append(os.path.abspath(os.curdir))
+        filepath = os.path.split(filename)[0]
+        sys.path.append(filepath)
         module = __import__(inspect.getmodulename(filename))
         method = [f[1] for f in inspect.getmembers(module, inspect.isfunction) if f[0] == functionname][0]
 
