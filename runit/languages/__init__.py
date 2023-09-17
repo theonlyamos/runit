@@ -20,12 +20,13 @@ class LanguageParser():
     @staticmethod
     def detect_language(filename: str, runtime: str, is_file: bool = False, is_docker: bool = False, project_id: str = '')-> Union[Python, PHP, Javascript, Multi]:
         if runtime == 'multi':
-            return Multi(filename, runtime, is_docker, is_file, project_id)
+            return Multi(filename, runtime, is_file, is_docker, project_id)
         return LanguageParser.EXT_TO_LANG[os.path.splitext(filename)[1].lower()](
             filename, 
-            runtime, 
-            is_docker=is_docker,
-            project_id=project_id
+            runtime,
+            is_file,
+            is_docker,
+            project_id
         )
 
     @staticmethod
