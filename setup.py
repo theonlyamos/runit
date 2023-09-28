@@ -1,13 +1,13 @@
 from importlib.metadata import entry_points
 from setuptools import setup, find_packages
 
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 
 with open('README.md', 'rt') as file:
     LONG_DESCRIPTION = file.read()
 
 setup(
-    name='python-runit',
+    name='runit',
     version=VERSION,
     author='Amos Amissah',
     author_email='theonlyamos@gmail.com',
