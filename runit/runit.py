@@ -415,7 +415,10 @@ class RunIt:
         package_file.close()
         try:
             logger.info('[-] Installing node modules...')
-            os.system('npm install')
+            if RunIt.RUNIT_RUNTIME == 'client':
+                os.system('npm install')
+            else:
+                os.system('bun install')
         except Exception as e:
             logger.exception(str(e))
             logger.error("[!] Couldn't install modules")
@@ -434,13 +437,13 @@ class RunIt:
         with open('composer.json', 'wt') as package_file:
             json.dump(package_details, package_file, indent=4)
 
-        # try:
-        #     logger.info('[-] Installing php packages...')
-        #     os.system('composer install')
-        # except Exception as e:
-        #     logger.exception(str(e))
-        #     logger.error("[!] Couldn't install packages")
-        #     logger.debug(INSTALL_MODULE_LATER_MESSAGE)
+        try:
+            logger.info('[-] Installing php packages...')
+            os.system('composer install')
+        except Exception as e:
+            logger.exception(str(e))
+            logger.error("[!] Couldn't install packages")
+            logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def install_python_packages(self):
         logger.info("[-] Creating virtual environment...")

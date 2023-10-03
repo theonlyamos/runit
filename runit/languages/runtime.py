@@ -18,7 +18,7 @@ class Runtime():
     def __init__(self, filename="", runtime="", is_file = False, is_docker=False, project_id=''):
         # extension = os.path.splitext(filename)[1].lower()
         self.filename = filename
-        self.runtime = runtime
+        self.iruntime = runtime
         self.is_file = is_file
         self.is_docker = is_docker
         self.project_id = project_id
@@ -40,15 +40,13 @@ class Runtime():
                 import docker
                 client = docker.from_env()
 
-                print(f"{self.project_id} {self.LOADER} {self.module}")
                 result = client.containers.run(self.project_id, f'{self.LOADER} {self.module}', auto_remove=True)
-                print(result)
             else:
-                result = check_output(f'{self.runtime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
+                result = check_output(f'{self.iruntime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
             
             result = result.strip()
             
-            if self.runtime == 'php':
+            if self.iruntime == 'php':
                 self.functions = result.split(',')
             else:
                 self.functions = eval(result)
@@ -57,7 +55,6 @@ class Runtime():
                 self.__setattr__(key, self.anon_function)
                 
         except Exception as e:
-            print(str(e))
             return str(e)
         
     def list_functions(self):
@@ -74,14 +71,14 @@ class Runtime():
         try:
             if len(args):
                 if self.is_file:
-                    return os.system(f'{self.runtime} {self.filename} "{args}"')
+                    return os.system(f'{self.iruntime} {self.filename} "{args}"')
                 else:
-                    result = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func} "{args}"', shell=True, encoding='utf-8')
+                    result = check_output(f'{self.iruntime} {self.RUNNER} {self.module} {self.current_func} "{args}"', shell=True, encoding='utf-8')
             else:
                 if self.is_file:
-                    return os.system(f'{self.runtime} {self.filename}')
+                    return os.system(f'{self.iruntime} {self.filename}')
                 else:
-                    result = check_output(f'{self.runtime} {self.RUNNER} {self.module} {self.current_func}', shell=True, encoding='utf-8')
+                    result = check_output(f'{self.iruntime} {self.RUNNER} {self.module} {self.current_func}', shell=True, encoding='utf-8')
 
             return result.strip()
         except Exception as e:

@@ -99,7 +99,9 @@ def run_project(args):
             raise FileNotFoundError
         elif args.file:
             filename = args.file
+            logger.info(f"filename: {filename}")
             runtime = EXT_TO_RUNTIME[os.path.splitext(filename)[1]]
+            logger.info(f"runtime: {runtime}")
             LanguageParser.run_file(filename, runtime)
         else:
             project = RunIt(**RunIt.load_config())
