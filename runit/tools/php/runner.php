@@ -6,7 +6,9 @@
  * @version 1.0.0
  */
 
-#require_once './request.php';
+ require_once __DIR__ . '/manager.php';
+ use Runit\Controller\DotEnvEnvironment;
+ 
 
 $functionArguments;
 
@@ -14,6 +16,8 @@ try {
     if ($argc > 1) {
         $filename = $argv[1];
         $functionname = $argv[2];
+        $filepath = dirname($filename);
+        (new DotEnvEnvironment)->load($filepath);
         
         include_once($filename);
 
