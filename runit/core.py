@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+import socketio
 import json
 import uvicorn
 import sys
@@ -11,7 +12,6 @@ from .constants import (
 )
 
 class RunitServerSetup:
-
     @staticmethod
     def create_default_env_file():
         if not find_dotenv():
@@ -54,7 +54,6 @@ class RunitServerSetup:
 # setup.setup_runit(args)
 
 class WebServer:
-
     def __init__(self, project):
         self.project = project
 
@@ -126,3 +125,19 @@ class WebServer:
 # Example usage:
 # web_server = WebServer(project_instance)
 # web_server.start()
+
+class WebSocketsManager:
+    def __init__(self, url):
+        self.url = url
+        self.sock = socketio.Client()
+        self.connect(self.url)
+        
+    def connect(self, url):
+        self.sock.connect(url)
+    
+    def send(self, payload):
+        self.sock.emit('expose', payload)
+    
+    @property
+    def id(self):
+        return self.sock.sid

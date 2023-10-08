@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Type, Optional
 from threading import Thread
 
+import socketio
+# import eventlet
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
@@ -25,21 +27,60 @@ from .exceptions import (
     ProjectExistsError,
     ProjectNameNotSpecified
 )
-from .core import WebServer
+from .core import WebServer, WebSocketsManager
 
       
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     datefmt='%d-%b-%y %H:%M:%S',
-    level=logging.DEBUG
+    level=logging.WARNING
 )
 logger = logging.getLogger('runit.log') 
 
 load_dotenv()
 
+# eventlet.monkey_patch()
+
 def start_webserver(project: RunIt, host: str = SERVER_HOST, port: int = SERVER_PORT):
     web_server = WebServer(project)
     web_server.start(host, port)
+
+def start_websocket(project: RunIt, args):
+    try:
+        url = os.getenv('RUNIT_API_ENDPOINT')
+        if not url:
+            raise Exception('set RUNIT_API_ENDPOINT environment variable')
+        
+        url = url.replace('/api/', '/')
+        sio = socketio.Client()
+
+        @sio.event
+        def connect():
+            sio.emit('handshake', {'type': 'client'})
+        
+        @sio.event
+        def handshake(data):
+            logger.info(f"Serving on {url}e/{data}")
+
+        @sio.event
+        def connect_error(error):
+            print(error)
+            print('Websocket Error')
+        
+        @sio.event
+        def exposed(func):
+            logger.info(f'--function: {func}')
+            sio.emit('expose', project.serve(func, args.arguments))
+
+        sio.connect(url,transports=['websocket'])
+        sio.wait()
+
+    except KeyboardInterrupt:
+        sys.exit(1)
+        
+    except Exception as e:
+        logger.error(str(e))
+        sys.exit(1)
 
 def create_config(args):
     config = {}
@@ -99,15 +140,15 @@ def run_project(args):
             raise FileNotFoundError
         elif args.file:
             filename = args.file
-            logger.info(f"filename: {filename}")
             runtime = EXT_TO_RUNTIME[os.path.splitext(filename)[1]]
-            logger.info(f"runtime: {runtime}")
             LanguageParser.run_file(filename, runtime)
         else:
             project = RunIt(**RunIt.load_config())
 
             if args.shell:
                 print(project.serve(args.function, args.arguments))
+            elif args.expose:
+                start_websocket(project, args)
             else:
                 start_webserver(project, args.host, args.port)
 
@@ -332,6 +373,7 @@ def get_arguments():
     parser.add_argument('-f', '--function', default='index', type=str, nargs='?', help='Name of function to run')
     parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')
     parser.add_argument('--shell', action='store_true', help='Run function only in shell')
+    parser.add_argument('--expose', action='store_true', help='Expose local project on configured domain')
     parser.add_argument('--host', type=str, default='127.0.0.1', help='Host address to run project on')
     parser.add_argument('--port', type=int, default=5000, help='Host port to run project on')
     parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
