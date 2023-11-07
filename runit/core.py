@@ -141,3 +141,16 @@ class WebSocketsManager:
     @property
     def id(self):
         return self.sock.sid
+
+# import asyncio
+# import websockets
+
+# async def websocket_client():
+#     uri = "ws://localhost:8765"  # replace with your server URI
+#     async with websockets.connect(uri) as websocket:
+#         await websocket.send("Hello, Server!")
+#         response = await websocket.recv()
+#         print(f"Received message from server: {response}")
+
+# # To run the client program
+# asyncio.get_event_loop().run_until_complete(websocket_client())

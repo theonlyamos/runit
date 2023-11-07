@@ -1,19 +1,21 @@
 import os
 import sys
+import json
+import time
 import shelve
 import getpass
-import argparse
+import asyncio
 import logging
+import argparse
+import websockets
 from pathlib import Path
 from typing import Type, Optional
 from threading import Thread
 
-import socketio
-# import eventlet
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
-import json
 
 from .languages import LanguageParser
 from .modules import Account
@@ -27,15 +29,15 @@ from .exceptions import (
     ProjectExistsError,
     ProjectNameNotSpecified
 )
-from .core import WebServer, WebSocketsManager
+from .core import WebServer
 
       
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     datefmt='%d-%b-%y %H:%M:%S',
-    level=logging.WARNING
+    level=logging.WARN
 )
-logger = logging.getLogger('runit.log') 
+logger = logging.getLogger('runit.log')
 
 load_dotenv()
 
@@ -45,42 +47,59 @@ def start_webserver(project: RunIt, host: str = SERVER_HOST, port: int = SERVER_
     web_server = WebServer(project)
     web_server.start(host, port)
 
-def start_websocket(project: RunIt, args):
-    try:
-        url = os.getenv('RUNIT_API_ENDPOINT')
-        if not url:
-            raise Exception('set RUNIT_API_ENDPOINT environment variable')
-        
-        url = url.replace('/api/', '/')
-        sio = socketio.Client()
+async def start_websocket(project: RunIt):
+    url = os.getenv('RUNIT_API_ENDPOINT')
+    if not url:
+        raise Exception('set RUNIT_API_ENDPOINT environment variable')
 
-        @sio.event
-        def connect():
-            sio.emit('handshake', {'type': 'client'})
-        
-        @sio.event
-        def handshake(data):
-            logger.info(f"Serving on {url}e/{data}")
+    url = url.replace('/api/', '/')
+    
+    client_id = int(time.time())
 
-        @sio.event
-        def connect_error(error):
-            print(error)
-            print('Websocket Error')
-        
-        @sio.event
-        def exposed(func):
-            logger.info(f'--function: {func}')
-            sio.emit('expose', project.serve(func, args.arguments))
+    uri: str = url.replace('http', 'ws') + 'ws/' + str(client_id)
 
-        sio.connect(url,transports=['websocket'])
-        sio.wait()
-
-    except KeyboardInterrupt:
-        sys.exit(1)
+    async with websockets.connect(uri) as websocket:
+        logger.info(f"Serving on {url}e/{client_id}")
+        await websocket.send(json.dumps({"type": "client"}))
+        # Wait for incoming messages
+        while True:
+            try:
+                response = await websocket.recv()
+                data = json.loads(response)
+                if "message" in list(data.keys()):
+                    print(f"Received message from server: {data['message']}", flush=True)
+                else:
+                    logger.info(f"Accessing function: {data['function']} with paramters: {data['parameters']}")
+                    response = {'type': 'response', 'data': project.serve(data['function'], data['parameters'])}
+                    await websocket.send(json.dumps(response))
+            except websockets.exceptions.ConnectionClosed:
+                print("Connection with server closed")
+                break
+    
+    # @socket.event
+    # async def connect():
+    #     await socket.emit('handshake', {'type': 'client'})
         
-    except Exception as e:
-        logger.error(str(e))
-        sys.exit(1)
+    # @socket.event
+    # async def disconnect():
+    #     logger.info('Disconnected Websocket')
+
+    # @socket.event
+    # async def handshake(data):
+    #     logger.info(f"Serving on {url}e/{data}")
+
+    # @socket.event
+    # async def connect_error(error):
+    #     logger.warn(error)
+    #     logger.info('Websocket Error')
+
+    # @socket.event
+    # async def exposed(data):
+    #     logger.info(f"Accessing function: {data['function']} with paramters: {data['parameters']}")
+    #     await socket.emit('expose', project.serve(data['function'], data['parameters']))
+
+    # await socket.connect(url, transports=['websocket'])
+    # await socket.wait()
 
 def create_config(args):
     config = {}
@@ -148,7 +167,12 @@ def run_project(args):
             if args.shell:
                 print(project.serve(args.function, args.arguments))
             elif args.expose:
-                start_websocket(project, args)
+                try:
+                    asyncio.run(start_websocket(project))
+                except KeyboardInterrupt:
+                    sys.exit(1)
+                except Exception:
+                    sys.exit(1)
             else:
                 start_webserver(project, args.host, args.port)
 

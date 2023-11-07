@@ -415,7 +415,7 @@ class RunIt:
         package_file.close()
         try:
             logger.info('[-] Installing node modules...')
-            if RunIt.RUNIT_RUNTIME == 'client':
+            if RunIt.RUNTIME_ENV == 'client':
                 os.system('npm install')
             else:
                 os.system('bun install')
