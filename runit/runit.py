@@ -209,7 +209,7 @@ class RunIt:
         return project.private
 
     @classmethod
-    def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR):
+    def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
 
         os.chdir(projects_folder)
@@ -223,11 +223,10 @@ class RunIt:
         if 'python' in project.runtime:
             project.runtime = cls.PYTHON_PATHS[sys.platform]
 
-        args = request.args
-        
-        args_list = []
-        for key, value in args.items():
-            args_list.append(value)
+        if type(args) is dict:
+            args = list(args.values())
+
+        args_list = args if type(args) is list  else []
         
         start_file = project.start_file
 
