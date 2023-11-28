@@ -1,4 +1,5 @@
 import os
+from typing import Callable
 from datetime import datetime, timedelta
 from subprocess import check_output
 
@@ -24,6 +25,7 @@ class Runtime():
         self.project_id = project_id
         self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
         self.functions = []
+        self.current_func: str = 'index'
         self.load_functions_from_supported_files()
     
     def load_functions_from_supported_files(self):
@@ -44,7 +46,7 @@ class Runtime():
             else:
                 result = check_output(f'{self.iruntime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
             
-            result = result.strip()
+            result = str(result).strip()
             
             if self.iruntime == 'php':
                 self.functions = result.split(',')

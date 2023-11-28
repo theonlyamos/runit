@@ -6,8 +6,10 @@ from getpass import getpass
 import requests
 from dotenv import load_dotenv
 
+from ..constants import API_VERSION
+
 load_dotenv()
-BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}"
+BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/{API_VERSION}/"
 PROJECTS_API = BASE_API+'projects/'
 RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
 BASE_HEADERS = {}
@@ -59,10 +61,10 @@ class Account():
             while not password:
                 password = getpass()
 
-            data = {"email": email, "password": password}
-            url = BASE_API + 'login/'
+            data = {"username": email, "password": password}
+            url = BASE_API + 'token/'
 
-            request = requests.post(url, json=data)
+            request = requests.post(url, data=data)
 
             result = request.json()
 
@@ -75,7 +77,7 @@ class Account():
                 print('[Error]', result['message'])
         except Exception as e:
             print(str(e))
-    
+    @staticmethod
     def logout(args):
         '''
         Logout of Current Account

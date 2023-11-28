@@ -17,7 +17,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=['requests','python-dotenv','fastapi', \
-                      'passlib', 'docker', 'uvicorn'],
+                      'passlib', 'docker', 'uvicorn', 'websockets'],
     keywords='python3 runit developer serverless architecture docker',
     project_urls={
         'Source': 'https://github.com/theonlyamos/runit/',

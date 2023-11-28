@@ -104,7 +104,7 @@ class RunIt:
         return {}
 
     @staticmethod
-    def set_project_name(name: str =None)-> str:
+    def set_project_name(name: Optional[str] = None)-> str:
         '''
         Set Project name from argument
         or terminal input
@@ -210,51 +210,51 @@ class RunIt:
         return project.private
 
     @classmethod
-        def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
-            global NOT_FOUND_FILE
+    def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
+        global NOT_FOUND_FILE
 
-            os.chdir(projects_folder)
-            
-            if not RunIt.has_config_file():
-                return RunIt.notfound()
-            
-            project = cls(**RunIt.load_config())
-            
-            
-            if 'python' in project.runtime:
-                project.runtime = cls.PYTHON_PATHS[sys.platform]
-
-            if type(args) is dict:
-                args = list(args.values())
-
-            args_list = args if type(args) is list  else []
-            
-            start_file = project.start_file
-
-            lang_parser = LanguageParser.detect_language(
-                filename=start_file, 
-                runtime=os.getenv('RUNTIME_'+project.language.upper(), project.runtime), 
-                is_docker=RunIt.DOCKER, 
-                project_id=project_id
-            )
-            lang_parser.current_func = func
-            try:
-                return getattr(lang_parser, func)(*args_list)
-            except AttributeError as e:
-                return RunIt.notfound()
-            except TypeError as e:
-                try:
-                    return getattr(lang_parser, func)()
-                except TypeError as e:
-                    return str(e)
+        os.chdir(projects_folder)
         
-        def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
-            global NOT_FOUND_FILE
-            
-            if 'python' in self.runtime:
-                self.runtime = self.PYTHON_PATHS[sys.platform]
-            
-            lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
+        if not RunIt.has_config_file():
+            return RunIt.notfound()
+        
+        project = cls(**RunIt.load_config())
+        
+        
+        if 'python' in project.runtime:
+            project.runtime = cls.PYTHON_PATHS[sys.platform]
+
+        if type(args) is dict:
+            args = list(args.values())
+
+        args_list = args if type(args) is list  else []
+        
+        start_file = project.start_file
+
+        lang_parser = LanguageParser.detect_language(
+            filename=start_file, 
+            runtime=os.getenv('RUNTIME_'+project.language.upper(), project.runtime), 
+            is_docker=RunIt.DOCKER, 
+            project_id=project_id
+        )
+        lang_parser.current_func = func
+        try:
+            return getattr(lang_parser, func)(*args_list)
+        except AttributeError as e:
+            return RunIt.notfound()
+        except TypeError as e:
+            try:
+                return getattr(lang_parser, func)()
+            except TypeError as e:
+                return str(e)
+    
+    def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
+        global NOT_FOUND_FILE
+        
+        if 'python' in self.runtime:
+            self.runtime = self.PYTHON_PATHS[sys.platform]
+        
+        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         setattr(lang_parser, 'current_func', func)
 
         if type(args) is dict:

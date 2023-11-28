@@ -18,6 +18,7 @@ PROJECTS_DIR = os.path.join(RUNIT_WORKDIR, 'projects')
 TEMPLATES_FOLDER = os.path.join(RUNIT_HOMEDIR, 'templates')
 SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 9000
+API_VERSION = 'v1'
 
 EXT_TO_LOADER = {
     '.py': os.path.join(TOOLS_DIR, 'python', 'loader.py'),
