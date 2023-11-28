@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import logging
+from pathlib import Path
 from zipfile import ZipFile
 from io import TextIOWrapper
 from typing import Optional, Union, Callable
@@ -209,51 +210,51 @@ class RunIt:
         return project.private
 
     @classmethod
-    def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
-        global NOT_FOUND_FILE
+        def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
+            global NOT_FOUND_FILE
 
-        os.chdir(projects_folder)
-        
-        if not RunIt.has_config_file():
-            return RunIt.notfound()
-        
-        project = cls(**RunIt.load_config())
-        
-        
-        if 'python' in project.runtime:
-            project.runtime = cls.PYTHON_PATHS[sys.platform]
+            os.chdir(projects_folder)
+            
+            if not RunIt.has_config_file():
+                return RunIt.notfound()
+            
+            project = cls(**RunIt.load_config())
+            
+            
+            if 'python' in project.runtime:
+                project.runtime = cls.PYTHON_PATHS[sys.platform]
 
-        if type(args) is dict:
-            args = list(args.values())
+            if type(args) is dict:
+                args = list(args.values())
 
-        args_list = args if type(args) is list  else []
-        
-        start_file = project.start_file
+            args_list = args if type(args) is list  else []
+            
+            start_file = project.start_file
 
-        lang_parser = LanguageParser.detect_language(
-            filename=start_file, 
-            runtime=os.getenv('RUNTIME_'+project.language.upper(), project.runtime), 
-            is_docker=RunIt.DOCKER, 
-            project_id=project_id
-        )
-        lang_parser.current_func = func
-        try:
-            return getattr(lang_parser, func)(*args_list)
-        except AttributeError as e:
-            return RunIt.notfound()
-        except TypeError as e:
+            lang_parser = LanguageParser.detect_language(
+                filename=start_file, 
+                runtime=os.getenv('RUNTIME_'+project.language.upper(), project.runtime), 
+                is_docker=RunIt.DOCKER, 
+                project_id=project_id
+            )
+            lang_parser.current_func = func
             try:
-                return getattr(lang_parser, func)()
+                return getattr(lang_parser, func)(*args_list)
+            except AttributeError as e:
+                return RunIt.notfound()
             except TypeError as e:
-                return str(e)
-    
-    def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
-        global NOT_FOUND_FILE
+                try:
+                    return getattr(lang_parser, func)()
+                except TypeError as e:
+                    return str(e)
         
-        if 'python' in self.runtime:
-            self.runtime = self.PYTHON_PATHS[sys.platform]
-        
-        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
+        def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
+            global NOT_FOUND_FILE
+            
+            if 'python' in self.runtime:
+                self.runtime = self.PYTHON_PATHS[sys.platform]
+            
+            lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
         setattr(lang_parser, 'current_func', func)
 
         if type(args) is dict:
@@ -383,6 +384,7 @@ class RunIt:
         
         if project_path != os.path.realpath(os.curdir):
             os.chdir(project_path)
+        
         packaging_functions = {}
         packaging_functions['javascript'] = self.update_and_install_package_json
         packaging_functions['php'] = self.update_and_install_composer_json
@@ -445,16 +447,23 @@ class RunIt:
             logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def install_python_packages(self):
-        logger.info("[-] Creating virtual environment...")
+        venv_path = os.path.join(os.curdir, 'venv')
         
+        if os.path.exists(venv_path):
+            logger.info(msg="[-] Deleting old virtual environment...")
+            rm_command = "rm -rf" if sys.platform != 'win32' else 'rm -r'
+            os.system(f"{rm_command} {os.path.realpath(venv_path)}")
+        
+        logger.info(msg="[!] Creating virtual environment...")
         os.system("python -m venv venv")
         logger.info("[+] Created virtual environment")
-        pip_path = os.path.join(os.curdir, 'venv', 'Scripts', 'pip.exe')
         
+        pip_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
+        logger.info(f"--{os.path.realpath(pip_path)}")
         if sys.platform != 'win32':
-            pip_path = f"{os.path.realpath(os.path.join(os.curdir, 'venv', 'bin', 'pip'))}"
+            pip_path = f"{os.path.realpath(os.path.join(venv_path, 'bin', 'pip'))}"
         try:
-            logger.info("[-] Installing python packages...")
+            logger.info("[!] Installing python packages...")
             activate_install_instructions = f"""
             {pip_path} install -r requirements.txt
             """.strip()
