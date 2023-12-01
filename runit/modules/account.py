@@ -61,10 +61,10 @@ class Account():
             while not password:
                 password = getpass()
 
-            data = {"username": email, "password": password}
-            url = BASE_API + 'token/'
+            data = {"email": email, "password": password}
+            url = BASE_API + 'login/'
 
-            request = requests.post(url, data=data)
+            request = requests.post(url, json=data)
 
             result = request.json()
 
@@ -140,7 +140,7 @@ class Account():
 
         except Exception as e:
             #print(str(e))
-            return None
+            return {}
   
     @staticmethod
     def info(args):
@@ -311,7 +311,7 @@ class Account():
             print(str(e))
     
     @staticmethod
-    def functions(args)-> dict:
+    def functions(args):
         '''
         Retrieve Functions
         
