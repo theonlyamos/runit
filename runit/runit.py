@@ -10,7 +10,6 @@ from io import TextIOWrapper
 from typing import Optional, Union, Callable
 from threading import Thread
 
-from flask import request
 from dotenv import load_dotenv
 
 from .languages import LanguageParser
