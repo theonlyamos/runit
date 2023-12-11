@@ -378,7 +378,7 @@ class RunIt:
         
         if RunIt.RUNTIME_ENV != 'server':
             os.chdir(project_path)
-            
+        
         # # if project_path != Path(os.curdir).resolve():
         # #     os.chdir(project_path)
         
@@ -453,7 +453,6 @@ class RunIt:
         
         logger.info(msg="[!] Creating virtual environment...")
         os.system("python -m venv venv")
-        logger.info("[+] Created virtual environment")
         
         pip_path = Path(venv_path, 'Scripts', 'pip.exe')
         # logger.info(f"--{str(Path(pip_path).resolve())}")

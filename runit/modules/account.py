@@ -267,6 +267,7 @@ class Account():
 
                 if 'message' in result.keys() and len(result['message']):
                     raise Exception(f"[Error] {result['message']}")
+                
             return response.content
 
         except Exception as e:

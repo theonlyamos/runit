@@ -182,24 +182,26 @@ def run_project(args):
 def clone(args):
     CURDIR = os.path.realpath(os.curdir)
     Account.isauthenticated({})
-    user = Account.user()
+    # user = Account.user()
     
-    project_path = os.path.join(CURDIR, args.project_name)
-    if not os.path.exists(project_path):
-        os.mkdir(project_path)
+    project_path = Path(CURDIR, args.project_name).resolve()
+    if not project_path.exists():
+        project_path.mkdir()
 
-    print(f'[+] Cloning project into {args.project_name}...')
+    
     downloaded_file = Account.clone_project(args.project_name)
-
-    filepath = os.path.join(project_path, f"{args.project_name}.zip")
+    print(f'[+] Cloning project into {args.project_name}...')
+    filepath = Path(project_path, f"{args.project_name}.zip").resolve()
     with open(filepath, 'wb') as zip_file:
         zip_file.write(downloaded_file)
+        
     print('[!] Cloning complete')
     RunIt.extract_project(filepath)
     os.chdir(project_path)
     runit = RunIt(**RunIt.load_config())
     print(runit)
-    Thread(target=runit.install_dependency_packages, args=()).start()
+    RunIt.RUNTIME_ENV = 'server'
+    runit.install_dependency_packages()
         
 def publish(args):
     global CONFIG_FILE
