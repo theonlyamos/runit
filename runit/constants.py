@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,12 +11,12 @@ DOT_RUNIT_IGNORE = '.runitignore'
 CONFIG_FILE = 'runit.json'
 STARTER_CONFIG_FILE = 'runit.json'
 IS_RUNNING = False
-CURRENT_PROJECT_DIR = os.path.realpath(os.curdir)
-RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
-RUNIT_WORKDIR = os.getenv('RUNIT_WORKDIR', os.path.join(os.path.expanduser('~'), 'RUNIT_WORKDIR'))
-TOOLS_DIR = os.path.join(RUNIT_HOMEDIR, 'tools')
-PROJECTS_DIR = os.path.join(RUNIT_WORKDIR, 'projects')
-TEMPLATES_FOLDER = os.path.join(RUNIT_HOMEDIR, 'templates')
+CURRENT_PROJECT_DIR = Path(os.curdir).resolve()
+RUNIT_HOMEDIR = Path(__file__, '..').resolve()
+RUNIT_WORKDIR = os.getenv('RUNIT_WORKDIR', Path(os.path.expanduser('~'), 'RUNIT_WORKDIR'))
+TOOLS_DIR = Path(RUNIT_HOMEDIR, 'tools')
+PROJECTS_DIR = Path(RUNIT_WORKDIR, 'projects')
+TEMPLATES_FOLDER = Path(RUNIT_HOMEDIR, 'templates')
 SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 9000
 API_VERSION = 'v1'

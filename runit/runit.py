@@ -197,7 +197,7 @@ class RunIt:
         bg_thread.join()
 
     @classmethod
-    def is_private(cls, project_id: str, projects_folder: str = PROJECTS_DIR)-> bool:
+    def is_private(cls, project_id: str, projects_folder: Path | str = PROJECTS_DIR)-> bool:
         global NOT_FOUND_FILE
 
         os.chdir(projects_folder)
@@ -209,7 +209,7 @@ class RunIt:
         return project.private
 
     @classmethod
-    def start(cls, project_id: str, func='index', projects_folder: str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
+    def start(cls, project_id: str, func='index', projects_folder: Path | str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
 
         os.chdir(projects_folder)
@@ -354,35 +354,33 @@ class RunIt:
         global TEMPLATES_FOLDER
         global NOT_FOUND_FILE
         
-        self.LANGUAGE_TEMPLATE_FOLDER = os.path.realpath(os.path.join(TEMPLATES_FOLDER, self.language))
+        self.LANGUAGE_TEMPLATE_FOLDER = Path(TEMPLATES_FOLDER, self.language).resolve()
         self.LANGUAGE_TEMPLATE_FILES = os.listdir(self.LANGUAGE_TEMPLATE_FOLDER)
         
         for template_file in self.LANGUAGE_TEMPLATE_FILES:
-            if os.path.isfile(os.path.join(self.LANGUAGE_TEMPLATE_FOLDER,template_file)):
-                with open(os.path.join(self.LANGUAGE_TEMPLATE_FOLDER,
-                    template_file),'rt') as file:
-                    with open(os.path.join(os.curdir, 
-                                           self.name, 
-                                           template_file), 'wt') as starter:
+            if Path(self.LANGUAGE_TEMPLATE_FOLDER, template_file).resolve().is_file():
+                with open(Path(self.LANGUAGE_TEMPLATE_FOLDER, template_file),'rt') as file:
+                    with open(Path(os.curdir, self.name, template_file), 'wt') as starter:
                         starter.write(file.read())
             
-        with open(os.path.join(TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
-            with open(os.path.join(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error_404:
+        with open(Path(TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
+            with open(Path(os.curdir, self.name, NOT_FOUND_FILE), 'wt') as error_404:
                 error_404.write(file.read())
         
-        with open(os.path.join(TEMPLATES_FOLDER, DOT_RUNIT_IGNORE),'rt') as file:
-            with open(os.path.join(os.curdir, self.name, DOT_RUNIT_IGNORE), 'wt') as dotrunitignore:
+        with open(Path(TEMPLATES_FOLDER, DOT_RUNIT_IGNORE),'rt') as file:
+            with open(Path(os.curdir, self.name, DOT_RUNIT_IGNORE), 'wt') as dotrunitignore:
                 dotrunitignore.write(file.read())
     
     def install_dependency_packages(self):
         global PROJECTS_DIR
 
-        project_path = os.path.realpath(os.path.join(os.curdir, self.name))
-        if RunIt.RUNTIME_ENV == 'server':
-            project_path = os.path.realpath(os.path.join(PROJECTS_DIR, self._id))
+        # project_path = Path(os.curdir, self.name).resolve()
         
-        if project_path != os.path.realpath(os.curdir):
-            os.chdir(project_path)
+        # if RunIt.RUNTIME_ENV == 'server':
+        #     project_path = Path(PROJECTS_DIR, self._id).resolve()
+            
+        # # if project_path != Path(os.curdir).resolve():
+        # #     os.chdir(project_path)
         
         packaging_functions = {}
         packaging_functions['javascript'] = self.update_and_install_package_json
@@ -446,9 +444,9 @@ class RunIt:
             logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def install_python_packages(self):
-        venv_path = os.path.join(os.curdir, 'venv')
+        venv_path = Path(os.curdir, 'venv').resolve()
         
-        if os.path.exists(venv_path):
+        if venv_path.exists():
             logger.info(msg="[-] Deleting old virtual environment...")
             rm_command = "rm -rf" if sys.platform != 'win32' else 'rm -r'
             os.system(f"{rm_command} {os.path.realpath(venv_path)}")
@@ -457,14 +455,15 @@ class RunIt:
         os.system("python -m venv venv")
         logger.info("[+] Created virtual environment")
         
-        pip_path = os.path.join(venv_path, 'Scripts', 'pip.exe')
-        logger.info(f"--{os.path.realpath(pip_path)}")
+        pip_path = Path(venv_path, 'Scripts', 'pip.exe')
+        logger.info(f"--{str(Path(pip_path).resolve())}")
         if sys.platform != 'win32':
-            pip_path = f"{os.path.realpath(os.path.join(venv_path, 'bin', 'pip'))}"
+            pip_path = f"{Path(venv_path, 'bin', 'pip').resolve()}"
         try:
             logger.info("[!] Installing python packages...")
+            # os.system(f"{str(pip_path)} install python-dotenv")
             activate_install_instructions = f"""
-            {pip_path} install -r requirements.txt
+            {str(pip_path)} install python-dotenv -r requirements.txt
             """.strip()
             os.system(activate_install_instructions)
             logger.info("[+] Installed python packages")

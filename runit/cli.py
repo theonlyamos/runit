@@ -112,8 +112,9 @@ def create_config(args):
     config['author']['email'] = "name@example.com"
     
     user = Account.user()
+    # print(user)
     os.chdir(CURRENT_PROJECT_DIR)
-    if user is not None:
+    if len(user.keys()):
         config['author']['name'] = user['name']
         config['author']['email'] = user['email']
     
@@ -143,7 +144,8 @@ def create_new_project(args):
         else:
             raise ProjectNameNotSpecified('Project name not specified')
     except Exception as e:
-        logger.error(str(e))
+        # logger.error(str(e))
+        logger.exception(e)
 
 def run_project(args):
     global CONFIG_FILE
@@ -219,8 +221,8 @@ def publish(args):
     
     project = RunIt(**config)
     if user:
-        project.author['name'] = user['name']
-        project.author['email'] = user['email']
+        project.author['name'] = user['name']       # type: ignore
+        project.author['email'] = user['email']     # type: ignore
 
     project.update_config()
     print('[-] Preparing project for upload...')
@@ -236,8 +238,8 @@ def publish(args):
     os.chdir(CURRENT_PROJECT_DIR)
     os.unlink(filename)
 
-    if 'msg' in result.keys():
-        print(result['msg'])
+    if 'detail' in result.keys():
+        print(result['detail'])
         exit(1)
     elif 'message' in result.keys():
         print(result['message'])
@@ -266,11 +268,11 @@ def setup_runit(args):
     @return None
     '''
     try:
-        if not find_dotenv():
-            env_path = Path(RUNIT_HOMEDIR) / '.env'
+        if not find_dotenv(str(Path(RUNIT_HOMEDIR, '.env'))):
+            env_path = Path(RUNIT_HOMEDIR, '.env')
             env_path.touch()
             set_key(find_dotenv(), 'RUNIT_API_ENDPOINT', '')
-            set_key(find_dotenv(), 'RUNIT_PROJECT_ID', '')
+            # set_key(find_dotenv(), 'RUNIT_PROJECT_ID', '')
             
         settings = dotenv_values(find_dotenv())
         
@@ -286,7 +288,7 @@ def setup_runit(args):
                     logger.info(f'Setting {key} to default [{value}]')
         
         for key, value in settings.items():
-            set_key(find_dotenv(), key, value)
+            set_key(find_dotenv(), key, str(value))
     except Exception as e:
         logger.error(str(e))
 
@@ -323,8 +325,7 @@ def get_arguments():
     
     subparsers = parser.add_subparsers()
     new_parser = subparsers.add_parser('new', help='Create new project or function')
-    new_parser.add_argument("name", type=str, nargs="?", 
-                        help="Name of the new project")          
+    new_parser.add_argument("name", type=str, nargs="?", help="Name of the new project")          
     new_parser.add_argument('-l', '--language', type=str, choices=['multi', 'python', 'php', 'javascript'],
                         help="Language of the new project", default="multi")
     new_parser.add_argument('-r','--runtime', type=str,

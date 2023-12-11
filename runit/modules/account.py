@@ -6,10 +6,10 @@ from getpass import getpass
 import requests
 from dotenv import load_dotenv
 
-from ..constants import API_VERSION
+# from ..constants import API_VERSION
 
 load_dotenv()
-BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/{API_VERSION}/"
+BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/"
 PROJECTS_API = BASE_API+'projects/'
 RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
 BASE_HEADERS = {}
@@ -71,8 +71,8 @@ class Account():
             if 'access_token' in result.keys():
                 token = load_token(result['access_token'])
                 print('[Success] Logged in successfully')
-            elif 'msg' in result.keys():
-                print('[Error]', result['msg'])
+            elif 'detail' in result.keys():
+                print('[Error]', result['detail'])
             else:
                 print('[Error]', result['message'])
         except Exception as e:
@@ -109,8 +109,8 @@ class Account():
 
             request = requests.get(url, headers=BASE_HEADERS)
             result = request.json()
-            if 'msg' in result.keys():
-                raise Exception(result['msg'])
+            if 'detail' in result.keys():
+                raise Exception(result['detail'])
 
         except Exception as e:
             print(str(e))
@@ -134,8 +134,8 @@ class Account():
 
             request = requests.get(url, headers=BASE_HEADERS)
             result = request.json()
-            if 'msg' in result.keys():
-                raise Exception(result['msg'])
+            if 'detail' in result.keys():
+                raise Exception(result['detail'])
             return result
 
         except Exception as e:
@@ -161,8 +161,8 @@ class Account():
             request = requests.get(url, headers=BASE_HEADERS)
             result = request.json()
 
-            if 'msg' in result.keys():
-                raise Exception('[Error] '+result['msg'])
+            if 'message' in result.keys():
+                raise Exception('[Error] '+result['message'])
             print(result)
 
         except Exception as e:
@@ -194,7 +194,7 @@ class Account():
             print(str(e))
     
     @staticmethod
-    def publish_project(files: dict, data: dict):
+    def publish_project(files, data: dict):
         '''
         Retrieve account details
         
@@ -208,13 +208,12 @@ class Account():
             token = load_token()
 
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
+            url = PROJECTS_API + 'publish'
 
-            req = requests.post(PROJECTS_API, data=data, 
+            req = requests.post(url, data=data, 
                         files=files, headers=BASE_HEADERS)
             result = req.json()
-
-            if 'msg' in result.keys() and len(result['msg']):
-                raise Exception(f"[Error] {result['msg']}")
+            
             return result
 
         except Exception as e:
@@ -244,8 +243,8 @@ class Account():
             if (response.headers['Content-Type'] == 'application/json'):
                 result = response.json()
 
-                if 'msg' in result.keys() and len(result['msg']):
-                    raise Exception(f"[Error] {result['msg']}")
+                if 'message' in result.keys() and len(result['message']):
+                    raise Exception(f"[Error] {result['message']}")
             return response.content
 
         except Exception as e:
