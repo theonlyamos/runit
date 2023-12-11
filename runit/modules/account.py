@@ -62,7 +62,7 @@ class Account():
                 password = getpass()
 
             data = {"email": email, "password": password}
-            url = BASE_API + 'login/'
+            url = BASE_API + 'login'
 
             request = requests.post(url, json=data)
 
@@ -163,7 +163,14 @@ class Account():
 
             if 'message' in result.keys():
                 raise Exception('[Error] '+result['message'])
-            print(result)
+            if 'detail' in result.keys():
+                raise Exception('[Error] '+result['detail'])
+            print()
+            for key, value in result.items():
+                if len(key) < 7:
+                    print(f"{key}:\t\t{value}")
+                else:
+                    print(f"{key}:\t{value}")
 
         except Exception as e:
             print(str(e))
@@ -184,11 +191,26 @@ class Account():
 
             url = BASE_API + 'projects/'
 
-            if not args.id is None:
-                url += f'{args.id}/'
+            if args.id:
+                url += f'{args.id}'
 
             request = requests.get(url, headers=BASE_HEADERS)
-            print(request.json())
+            results = request.json()
+            
+            if isinstance(results, dict):
+                print()
+                for key, value in results.items():
+                    if len(key) < 7:
+                        print(f"{key}:\t\t{value}")
+                    else:
+                        print(f"{key}:\t{value}")
+            else:
+                for project in results:
+                    print()
+                    print(f"ID:\t\t{project['id']}")
+                    print(f"Name:\t\t{project['name']}")
+                    print(f"Description:\t{project['description']}")
+                    print("="*20)
 
         except Exception as e:
             print(str(e))
@@ -236,7 +258,7 @@ class Account():
 
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
             
-            url = BASE_API + f'projects/clone/{project}/'
+            url = BASE_API + f'projects/clone/{project}'
 
             response = requests.get(url, headers=BASE_HEADERS)
 
@@ -274,7 +296,7 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_API + f'projects/{args.id}/'
+            url = BASE_API + f'projects/{args.id}'
 
             data = {}
             raw = args.data
@@ -301,7 +323,7 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_API + f'projects/{args.id}/'
+            url = BASE_API + f'projects/{args.id}'
 
             request = requests.delete(url, headers=BASE_HEADERS)
             print(request.json())
@@ -322,13 +344,13 @@ class Account():
             token = load_token()
             BASE_HEADERS['Authorization'] = f"Bearer {token}"
 
-            url = BASE_API + 'functions/'
+            url = BASE_API + 'functions'
 
-            if not args.project is None:
-                url += f'{args.project}/'
+            if args.project:
+                url += f'/{args.project}'
             
-            if not args.id is None:
-                url += f'{args.id}/'
+            if args.id:
+                url += f'/{args.id}'
 
             request = requests.get(url, headers=BASE_HEADERS)
             print(request.json())

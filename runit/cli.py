@@ -35,9 +35,10 @@ from .core import WebServer
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     datefmt='%d-%b-%y %H:%M:%S',
-    level=logging.WARN
+    level=logging.INFO
 )
 logger = logging.getLogger('runit.log')
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 load_dotenv()
 

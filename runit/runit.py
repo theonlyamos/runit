@@ -22,7 +22,7 @@ from .constants import (
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     datefmt='%d-%b-%y %H:%M:%S',
-    level=logging.DEBUG
+    level=logging.INFO
 )
 logger = logging.getLogger('runit.log')
 
@@ -374,10 +374,10 @@ class RunIt:
     def install_dependency_packages(self):
         global PROJECTS_DIR
 
-        # project_path = Path(os.curdir, self.name).resolve()
+        project_path = Path(os.curdir, self.name).resolve()
         
-        # if RunIt.RUNTIME_ENV == 'server':
-        #     project_path = Path(PROJECTS_DIR, self._id).resolve()
+        if RunIt.RUNTIME_ENV != 'server':
+            os.chdir(project_path)
             
         # # if project_path != Path(os.curdir).resolve():
         # #     os.chdir(project_path)
@@ -456,7 +456,7 @@ class RunIt:
         logger.info("[+] Created virtual environment")
         
         pip_path = Path(venv_path, 'Scripts', 'pip.exe')
-        logger.info(f"--{str(Path(pip_path).resolve())}")
+        # logger.info(f"--{str(Path(pip_path).resolve())}")
         if sys.platform != 'win32':
             pip_path = f"{Path(venv_path, 'bin', 'pip').resolve()}"
         try:
