@@ -23,7 +23,7 @@ from .runit import RunIt
 from .constants import (
     VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR,
     EXT_TO_RUNTIME, LANGUAGE_TO_RUNTIME, RUNIT_HOMEDIR,
-    SERVER_HOST, SERVER_PORT, CONFIG_FILE
+    SERVER_HOST, SERVER_PORT, CONFIG_FILE, API_VERSION
 )
 from .exceptions import (
     ProjectExistsError,
@@ -53,7 +53,8 @@ async def start_websocket(project: RunIt):
     if not url:
         raise Exception('set RUNIT_API_ENDPOINT environment variable')
 
-    url = url.replace('/api/', '/')
+    url = url.replace(f'/api/', '/')
+    ulr = url.replace(f'{API_VERSION}', '')
     
     client_id = int(time.time())
 
