@@ -2,21 +2,21 @@
 
 function index()
 {
-    echo 'Yay, PHP works!!!';
+    return 'Yay, PHP works!!!';
 }
 
 function printout($word){
-    echo $word;
+    return $word;
 }
 
 function counter()
 {
-    echo '1,2,3,4,5';
+    return '1,2,3,4,5';
 }
 
 function gettime()
 {
-    echo date("Y-m-d H:i:s");
+    return date("Y-m-d H:i:s");
 }
 
 ?>

@@ -1,15 +1,15 @@
 exports.index = ()=>{
-    console.log('Yay, Javascript works!!!')
+    return 'Yay, Javascript works!!!'
 }
 
 exports.counter = ()=>{
-    console.log(1,2,3,4,5)
+    return '1,2,3,4,5'
 }
 
 exports.printout = (string)=>{
-    console.log(string)
+    return string
 }
 
 exports.time = ()=>{
-    console.log(new Date().toUTCString())
+    return new Date().toUTCString()
 }

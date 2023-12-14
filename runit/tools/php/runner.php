@@ -26,9 +26,9 @@ try {
         }
 
         if (!isset($functionArguments)) {
-            ($functionname)();
+            echo ($functionname)();
         } else {
-            ($functionname)($functionArguments);
+            echo ($functionname)($functionArguments);
         }
     
     }

@@ -19,9 +19,9 @@ try {
         if (args.length > 4) functionArguments = args[4]
     
         if (functionArguments !== undefined) {
-            method(functionArguments)
+            console.log(method(functionArguments))
         } else {
-            method()
+            console.log(method())
         }
     
     }

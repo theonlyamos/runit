@@ -1,17 +1,17 @@
 #from packages import request
 
 def index():
-    print('Yay, Python works')
+    return 'Yay, Python works'
 
 def counter():
-    print([i for i in range(0, 9)])
+    return [i for i in range(0, 9)]
 
 def printout(string):
-    print(string)
+    return string
 
 def time():
     from datetime import datetime
-    print((datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S"))
+    return (datetime.utcnow()).strftime("%a %b %d %Y %H:%M:%S")
 
 def quote():
     from collections import namedtuple
@@ -28,4 +28,4 @@ def quote():
         Quote("Progress is possible only if we train ourselves to think about programs without thinking of them as pieces of executable code. ",
               "Edsger W. Dijkstra")
     ]
-    print(choice(quotes)._asdict())
+    return choice(quotes)._asdict()

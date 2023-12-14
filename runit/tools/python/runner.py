@@ -13,16 +13,16 @@ try:
         filepath = os.path.split(filename)[0]
         load_dotenv(os.path.join(filepath, '.env'))
         sys.path.append(filepath)
-        module = __import__(inspect.getmodulename(filename))
+        module = __import__(str(inspect.getmodulename(filename)))
         method = [f[1] for f in inspect.getmembers(module, inspect.isfunction) if f[0] == functionname][0]
 
         if len(args) > 3:
             functionArguments = args[3]
 
         if functionArguments is not None:
-            method(functionArguments)
+            print(method(functionArguments))
         else:
-            method()
+            print(method())
     
 except Exception as e:
     print(str(e))
