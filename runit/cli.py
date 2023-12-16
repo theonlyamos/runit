@@ -17,6 +17,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
 
+from .generate import generate_function
 from .languages import LanguageParser
 from .modules import Account
 from .runit import RunIt
@@ -125,6 +126,17 @@ def create_config(args):
 def create_project(config):
     return RunIt(**config)
 
+def write_function(args):
+    runit = RunIt(**RunIt.load_config())
+    print("[!] Generating function...")
+    content = asyncio.run(generate_function(args.description, runit.language, args.name))
+    content = '\n'+'\n'.join(str(content).split('\n')[1:-1])
+
+    with open(runit.start_file, 'at') as file:
+        file.write(str(content))
+        
+    print('[+] Function generated successfully')
+
 def create_new_project(args):
     global CURRENT_PROJECT
     '''
@@ -191,12 +203,14 @@ def clone(args):
 
     
     downloaded_file = Account.clone_project(args.project_name)
-    print(f'[+] Cloning project into {args.project_name}...')
+    print(f'[-] Cloning project into {args.project_name}...')
     filepath = Path(project_path, f"{args.project_name}.zip").resolve()
-    with open(filepath, 'wb') as zip_file:
-        zip_file.write(downloaded_file)
+    with open(filepath, 'wb') as f:
+        for chunk in downloaded_file.iter_content(chunk_size=1024): 
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
         
-    print('[!] Cloning complete')
+    print('[+] Cloning complete')
     RunIt.extract_project(filepath)
     os.chdir(project_path)
     runit = RunIt(**RunIt.load_config())
@@ -337,6 +351,13 @@ def get_arguments():
     new_parser.add_argument('--private', action='store_true', 
                         help="Make project publicly accessible or not. Default is public.")
     new_parser.set_defaults(func=create_new_project)
+    
+    generate_parser = subparsers.add_parser('generate', help='Generate a new function using AI')         
+    generate_parser.add_argument('-n', '--name', type=str, 
+                        help="Name of the function", required=True)
+    generate_parser.add_argument('-d','--description', type=str, required=True,
+                        help="Natural language description of what the function does")
+    generate_parser.set_defaults(func=write_function)
     
     # run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
     # run_parser.add_argument('function', default='index', type=str, nargs='?', help='Name of function to run')
