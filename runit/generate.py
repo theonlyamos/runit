@@ -48,27 +48,78 @@ Readability: The generated code should be easy to understand and follow, even fo
 Efficiency: The generated code should be efficient and use the best practices for the given programming language.
 """
 
-async def generate_function(description: str, language: Optional[str] = None, function_name: Optional[str] = None):
-    prompt = f"""Description:\n{description}
+async def generate_function(
+    description: str, 
+    language: Optional[str] = None,
+    function_name: Optional[str] = None
+) -> str:
     """
-    if language:
-        prompt += f"""\nlanguage:\n{language}
-        """
-        
-    if language:
-        prompt += f"""\nfunction_name:\n{function_name}
-        """
+    Generate function code from a natural language description using OpenAI API.
 
-    completion = client.chat.completions.create(
-    model="local-model", # this field is currently unused
-    messages=[
+    Args:
+        description (str): The natural language description of the function.
+        language (str, optional): The programming language to generate code in.
+        function_name (str, optional): The name of the function.
+
+    Returns:
+        str: The generated function code.
+    """
+    
+    prompt = _construct_prompt(description, language, function_name)
+
+    completions = await _call_openai(prompt)
+    
+    return _extract_code(completions)
+
+
+def _construct_prompt(
+    description: str,
+    language: Optional[str] = None, 
+    function_name: Optional[str] = None
+) -> str:
+    """
+    Construct the prompt for code generation based on inputs.
+    """
+
+    prompt = f"Description:\n{description}\n"
+
+    if language:
+        prompt += f"Language:\n{language}\n"
+    
+    if function_name:
+        prompt += f"Function name:\n{function_name}\n"
+
+    return prompt
+
+
+async def _call_openai(prompt: str):
+    """
+    Call the OpenAI API to generate completions for the prompt.
+    """
+
+    openai_client = OpenAI(base_url="http://localhost:1234/v1", api_key="not-needed")
+    
+    messages = [
         {"role": "system", "content": SYSMTEM_PROMPT},
         {"role": "user", "content": prompt}
-    ],
-    temperature=0.7,
+    ]
+    
+    model = 'local-model'
+    
+    return openai_client.completions.create(
+        model=model,
+        prompt=prompt,
+        temperature=0.2
     )
 
-    return completion.choices[0].message.content
+
+def _extract_code(completion):
+    """
+    Extract generated code from the completions object.
+    """
+
+    return completion.choices[0].text
+
 
 if __name__ == '__main__':
     description = input('Description> ')

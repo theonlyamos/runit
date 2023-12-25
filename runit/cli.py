@@ -130,7 +130,9 @@ def write_function(args):
     runit = RunIt(**RunIt.load_config())
     print("[!] Generating function...")
     content = asyncio.run(generate_function(args.description, runit.language, args.name))
-    content = '\n'+'\n'.join(str(content).split('\n')[1:-1])
+    content = str(content)
+    if content.startswith('```'):
+        content = '\n'+'\n'.join(str(content).split('\n')[1:-1])
 
     with open(runit.start_file, 'at') as file:
         file.write(str(content))
