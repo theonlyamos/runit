@@ -117,7 +117,7 @@ class RunIt:
                 IS_RUNNING = True
                 
             while not name:
-                name = str(input('Enter RunIt Name: '))
+                name = str(input('Enter RunIt Project Name: '))
             return name
         except KeyboardInterrupt:
             sys.exit(1)
@@ -130,7 +130,7 @@ class RunIt:
         if format == 'json':
             return '404 - Not Found'
 
-        with open(os.path.join(os.curdir, TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
+        with open(os.path.join(TEMPLATES_FOLDER, NOT_FOUND_FILE),'rt') as file:
             return file.read()
     
     @staticmethod
@@ -200,7 +200,7 @@ class RunIt:
     def is_private(cls, project_id: str, projects_folder: Path | str = PROJECTS_DIR)-> bool:
         global NOT_FOUND_FILE
 
-        os.chdir(projects_folder)
+        os.chdir(Path(projects_folder, project_id))
         
         if not RunIt.has_config_file():
             return False
@@ -212,7 +212,7 @@ class RunIt:
     def start(cls, project_id: str, func='index', projects_folder: Path | str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
 
-        os.chdir(projects_folder)
+        os.chdir(Path(projects_folder, project_id))
         
         if not RunIt.has_config_file():
             return RunIt.notfound()
@@ -232,7 +232,7 @@ class RunIt:
 
         lang_parser = LanguageParser.detect_language(
             filename=start_file, 
-            runtime=os.getenv('RUNTIME_'+project.language.upper(), project.runtime), 
+            runtime=project.runtime, 
             is_docker=RunIt.DOCKER, 
             project_id=project_id
         )
@@ -408,9 +408,9 @@ class RunIt:
         package_details['name'] = self.name
         package_details['author'] = self.author
         
-        package_file = open('package.json', 'wt')
-        json.dump(package_details, package_file, indent=4)
-        package_file.close()
+        with open('package.json', 'wt') as package_file:
+            json.dump(package_details, package_file, indent=4)
+        
         try:
             logger.info('[-] Installing node modules...')
             if RunIt.RUNTIME_ENV == 'client':
@@ -425,9 +425,10 @@ class RunIt:
 
     def update_and_install_composer_json(self):
         logger.info("[-] Creating and updating composer.json")
-        package_file = open('composer.json', 'rt')
-        package_details = json.load(package_file)
-        package_file.close()
+        
+        package_details = {}
+        with open('composer.json', 'rt') as package_file:
+            package_details = json.load(package_file)
         
         package_details['name'] = f"runit/{self.name.replace('-', '_')}"
         package_details['author'] = self.author

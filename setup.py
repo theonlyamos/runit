@@ -20,7 +20,7 @@ setup(
                       'passlib', 'docker', 'uvicorn', 'websockets'],
     keywords='python3 runit developer serverless architecture docker',
     project_urls={
-        'Source': 'https://github.com/theonlyamos/runit/',
+        'Source': 'https://github.com/theonlyamos/runit',
         'Tracker': 'https://github.com/theonlyamos/runit/issues',
     },
     classifiers=[
