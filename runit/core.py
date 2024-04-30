@@ -1,4 +1,6 @@
+import asyncio
 import os
+from typing import Optional
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 import json
@@ -46,7 +48,7 @@ class RunitServerSetup:
         RunitServerSetup.update_api_settings(args, settings)
 
         for key, value in settings.items():
-            set_key(find_dotenv(), key, value)
+            set_key(find_dotenv(), key, str(value))
 
 # Example usage:
 # setup = RunitServerSetup()
@@ -58,7 +60,6 @@ class WebServer:
 
     def create_app(self):
         app = FastAPI()
-        app.secret_key = os.getenv('SECRET_KEY')
         return app
 
     def add_routes(self, app):
@@ -67,7 +68,8 @@ class WebServer:
         @app.api_route('/{func}/', methods=["GET", "POST"])
         @app.api_route('/{func}/{output_format}', methods=["GET", "POST"])
         @app.api_route('/{func}/{output_format}/', methods=["GET", "POST"])
-        async def serve(func: str = 'index', output_format: str = 'json', request: Request = None):
+        
+        async def serve(func: str = 'index', output_format: str = 'json', request: Request = None): # type: ignore
             response = self.handle_request(func, output_format, request)
             return self.process_response(output_format, response)
 
@@ -88,13 +90,20 @@ class WebServer:
 
         return response
 
-    async def get_request_parameters(self, request):
-        parameters = request.query_params._dict
-        if 'content-type' in request.headers.keys() and request.headers['content-type'] == "application/json":
-            data = await request.json()
-            parameters = {**parameters, **data}
-        parameters.pop('output_format', None)
-        return list(parameters.values()) if request else request
+    def get_request_parameters(self, request: Request):
+        data = {}
+
+        if request.method == 'POST':
+            data = asyncio.run(request._get_form())
+            data = data._dict
+
+            if request.headers['content-type'] == "application/json":
+                data = asyncio.run(request.json())
+        else:
+            data = request.query_params._dict
+
+        data.pop('output_format', None)
+        return list(data.values()) if request else request
 
     def check_404(self, result):
         if result.startswith('404'):

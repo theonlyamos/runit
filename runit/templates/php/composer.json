@@ -5,8 +5,7 @@
     "keywords": ["runit", "php"],
     "license": "MIT",
     "require": {
-        "php": "^8.0.2",
-        "theonlyamos/runit": "^7.2"
+        "php": "^8.0.2"
     },
     "prefer-stable": true
 }

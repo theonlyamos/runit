@@ -1,4 +1,4 @@
-const dotenv = require('dotenv')
+// const dotenv = require('dotenv')
 const path = require('node:path')
 
 const args = process.argv
@@ -8,10 +8,10 @@ let functionArguments;
 try {
     if (args.length >= 3) {
         const filename = args[2]
-        const filepath = path.dirname(filename)
-        dotenv.config({
-            path: path.join(filepath, '.env')
-        })
+        // const filepath = path.dirname(filename)
+        // dotenv.config({
+        //     path: path.join(filepath, '.env')
+        // })
         const functionname = args[3]
         
         const method = require(filename)[functionname]

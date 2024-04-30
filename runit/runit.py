@@ -413,10 +413,7 @@ class RunIt:
         
         try:
             logger.info('[-] Installing node modules...')
-            if RunIt.RUNTIME_ENV == 'client':
-                os.system('npm install')
-            else:
-                os.system('bun install')
+            os.system(f'{self.runtime if self.runtime == 'bun' else 'npm'} install')
         except Exception as e:
             logger.exception(str(e))
             logger.error("[!] Couldn't install modules")
