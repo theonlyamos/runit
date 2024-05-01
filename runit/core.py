@@ -74,28 +74,25 @@ class WebServer:
             return self.process_response(output_format, response)
 
     def handle_request(self, func, output_format, request):
-        response = {'status': True, 'data': {}}
+        response = ''
         result = ''
-
         try:
             parameters = self.get_request_parameters(request)
             result = self.project.serve(func, parameters)
             self.check_404(result)
-            response['data'] = self.parse_result(result)
+            response = self.parse_result(result)
         except json.decoder.JSONDecodeError:
-            response['data'] = result
+            response = result
         except Exception:
-            response['status'] = False
-            response['message'] = self.project.notfound(output_format)
-
-        return response
+            response = self.project.notfound(output_format)
+        finally:
+            return response
 
     def get_request_parameters(self, request: Request):
         data = {}
 
-        if request.method == 'POST':
-            data = asyncio.run(request._get_form())
-            data = data._dict
+        if request.method.lower() == 'post':
+            data = request._form._dict if request._form else {}
 
             if request.headers['content-type'] == "application/json":
                 data = asyncio.run(request.json())
@@ -103,10 +100,11 @@ class WebServer:
             data = request.query_params._dict
 
         data.pop('output_format', None)
-        return list(data.values()) if request else request
+        
+        return list(data.values())
 
     def check_404(self, result):
-        if result.startswith('404'):
+        if '404' in result:
             raise RuntimeError('Not Found')
 
     def parse_result(self, result):

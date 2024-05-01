@@ -311,7 +311,7 @@ class RunIt:
         config_file.close()
     
     def get_exclude_list(self):
-        exclude_list = [self.name + '.zip', 'account.db', '.git', '.venv', 'venv', 'Dockerfile']
+        exclude_list = [self.name + '.zip', '.env', 'account.db', '.git', '.venv', 'venv', 'Dockerfile']
         
         if os.path.exists(DOT_RUNIT_IGNORE):
             with open(DOT_RUNIT_IGNORE, 'rt') as file:
