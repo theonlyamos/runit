@@ -1,15 +1,22 @@
-exports.index = ()=>{
+const index = ()=>{
     return 'Yay, Javascript works!!!'
 }
 
-exports.counter = ()=>{
+const counter = ()=>{
     return '1,2,3,4,5'
 }
 
-exports.printout = (string)=>{
+const printout = (string)=>{
     return string
 }
 
-exports.time = ()=>{
+const time = ()=>{
     return new Date().toUTCString()
+}
+
+module.exports = {
+    index,
+    counter,
+    printout,
+    time
 }

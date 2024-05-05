@@ -6,8 +6,8 @@
  * @version 1.0.0
  */
 
- require_once __DIR__ . '/manager.php';
- use Runit\Controller\DotEnvEnvironment;
+//  require_once __DIR__ . '/manager.php';
+//  use Runit\Controller\DotEnvEnvironment;
  
 
 $functionArguments;
@@ -17,7 +17,7 @@ try {
         $filename = $argv[1];
         $functionname = $argv[2];
         $filepath = dirname($filename);
-        (new DotEnvEnvironment)->load($filepath);
+        // (new DotEnvEnvironment)->load($filepath);
         
         include_once($filename);
 

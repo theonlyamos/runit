@@ -452,15 +452,15 @@ class RunIt:
         logger.info(msg="[!] Creating virtual environment...")
         os.system("python -m venv venv")
         
-        pip_path = Path(venv_path, 'Scripts', 'pip.exe')
+        pip_path = f"{Path(venv_path, 'bin', 'pip').resolve()}"
         # logger.info(f"--{str(Path(pip_path).resolve())}")
-        if sys.platform != 'win32':
-            pip_path = f"{Path(venv_path, 'bin', 'pip').resolve()}"
+        if sys.platform == 'win32':
+            pip_path = Path(venv_path, 'Scripts', 'pip.exe')
         try:
             logger.info("[!] Installing python packages...")
             # os.system(f"{str(pip_path)} install python-dotenv")
             activate_install_instructions = f"""
-            {str(pip_path)} install python-dotenv -r requirements.txt
+            {str(pip_path)} install -r requirements.txt
             """.strip()
             os.system(activate_install_instructions)
             logger.info("[+] Installed python packages")

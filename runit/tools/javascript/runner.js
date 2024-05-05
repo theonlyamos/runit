@@ -1,30 +1,29 @@
-// const dotenv = require('dotenv')
-const path = require('node:path')
+const args = process.argv;
 
-const args = process.argv
+if (args.length >= 3) {
+    const filename = args[2];
+    const functionname = args[3];
+    const functionArguments = args.length > 4 ? args[4] : undefined;
 
-let functionArguments;
+    try {
+        const module = require(filename);
+        const method = module[functionname];
 
-try {
-    if (args.length >= 3) {
-        const filename = args[2]
-        // const filepath = path.dirname(filename)
-        // dotenv.config({
-        //     path: path.join(filepath, '.env')
-        // })
-        const functionname = args[3]
-        
-        const method = require(filename)[functionname]
+        if (typeof method === 'function') {
+            // Check if functionArguments are provided and handle accordingly
+            const result = functionArguments ? method(functionArguments) : method();
 
-        if (args.length > 4) functionArguments = args[4]
-    
-        if (functionArguments !== undefined) {
-            console.log(method(functionArguments))
+            // Check if the result is a Promise
+            if (result instanceof Promise) {
+                result.then(output => console.log(output))
+                      .catch(error => console.error("Error executing async function:", error));
+            } else {
+                console.log(result);
+            }
         } else {
-            console.log(method())
+            console.log('No function found by the name:', functionname);
         }
-    
+    } catch (error) {
+        console.error("Error:", error);
     }
-} catch (error) {
-    console.log(error)
 }
