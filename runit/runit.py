@@ -209,43 +209,51 @@ class RunIt:
         return project.private
 
     @classmethod
-    def start(cls, project_id: str, func='index', projects_folder: Path | str = PROJECTS_DIR, args: Optional[Union[dict,list]]=None):
+    async def start(cls, project_id: str, func='index', projects_folder: Path | str = PROJECTS_DIR, args: Optional[Union[dict, list]] = None):
         global NOT_FOUND_FILE
 
         os.chdir(Path(projects_folder, project_id))
-        
-        if not RunIt.has_config_file():
-            return RunIt.notfound()
-        
-        project = cls(**RunIt.load_config())
-        
-        
+
+        if not cls.has_config_file():
+            return cls.notfound()
+
+        project = cls(**cls.load_config())
+
         if 'python' in project.runtime:
             project.runtime = cls.PYTHON_PATHS[sys.platform]
 
-        if type(args) is dict:
+        if isinstance(args, dict):
             args = list(args.values())
 
-        args_list = args if type(args) is list  else []
-        
-        start_file = project.start_file
+        args_list = args if isinstance(args, list) else []
 
         lang_parser = LanguageParser.detect_language(
-            filename=start_file, 
-            runtime=project.runtime, 
-            is_docker=RunIt.DOCKER, 
+            filename=project.start_file,
+            runtime=project.runtime,
+            is_docker=cls.DOCKER,
             project_id=project_id
         )
-        lang_parser.current_func = func
-        try:
-            return getattr(lang_parser, func)(*args_list)
-        except AttributeError as e:
+        
+        if not func in lang_parser.functions:
             return RunIt.notfound()
-        except TypeError as e:
-            try:
+        
+        lang_parser.current_func = func
+        
+        parameters = lang_parser.functions[func] # type: ignore
+
+        try:
+            if len(parameters):
+                if not len(args_list):
+                    raise Exception('[!] No arguments provided')
+                return getattr(lang_parser, func)(*args_list)
+            else:
                 return getattr(lang_parser, func)()
-            except TypeError as e:
-                return str(e)
+        except AttributeError:
+            return cls.notfound()
+        except TypeError as e:
+            return str(e)
+        except Exception as e:
+            return str(e)
     
     def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
@@ -254,22 +262,30 @@ class RunIt:
             self.runtime = self.PYTHON_PATHS[sys.platform]
         
         lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
+        
+        if not func in lang_parser.functions:
+            return RunIt.notfound()
+        
         setattr(lang_parser, 'current_func', func)
-
-        if type(args) is dict:
+       
+        if isinstance(args, dict):
             args = list(args.values())
 
         args_list = args if type(args) is list  else []
-        
+
+        parameters = lang_parser.functions[func] # type: ignore
+
         try:
-            return getattr(lang_parser, func)(*args_list)
+            if len(parameters):
+                if not len(args_list):
+                    raise Exception(f'[!] Expected arguments: {parameters}')
+                return getattr(lang_parser, func)(*args_list)
+            else:
+                return getattr(lang_parser, func)()
         except AttributeError as e:
             return RunIt.notfound()
         except TypeError as e:
-            try:
-                return getattr(lang_parser, func)()
-            except TypeError as e:
-                return str(e)
+            return str(e)
         except Exception as e:
             return str(e)
     
@@ -311,7 +327,7 @@ class RunIt:
         config_file.close()
     
     def get_exclude_list(self):
-        exclude_list = [self.name + '.zip', '.env', 'account.db', '.git', '.venv', 'venv', 'Dockerfile']
+        exclude_list = [self.name + '.zip', '.env', 'account.db', '.git', '.venv', 'venv', 'Dockerfile', '__pycache__']
         
         if os.path.exists(DOT_RUNIT_IGNORE):
             with open(DOT_RUNIT_IGNORE, 'rt') as file:
@@ -460,7 +476,7 @@ class RunIt:
             logger.info("[!] Installing python packages...")
             # os.system(f"{str(pip_path)} install python-dotenv")
             activate_install_instructions = f"""
-            {str(pip_path)} install -r requirements.txt
+            {str(pip_path)} install python-dotenv -r requirements.txt
             """.strip()
             os.system(activate_install_instructions)
             logger.info("[+] Installed python packages")

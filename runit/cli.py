@@ -54,15 +54,14 @@ async def start_websocket(project: RunIt):
     if not url:
         raise Exception('set RUNIT_API_ENDPOINT environment variable')
 
-    url = url.replace(f'/api/', '/')
-    ulr = url.replace(f'{API_VERSION}', '')
+    url = url.replace(f'/api/{API_VERSION}', '')
     
     client_id = int(time.time())
 
-    uri: str = url.replace('http', 'ws') + 'ws/' + str(client_id)
-
+    uri: str = url.replace('http', 'ws') + '/ws/' + str(client_id)
+    
     async with websockets.connect(uri) as websocket:
-        logger.info(f"Serving on {url}e/{client_id}")
+        logger.info(f"Serving on {url}/e/{client_id}")
         await websocket.send(json.dumps({"type": "client"}))
         # Wait for incoming messages
         while True:
@@ -140,7 +139,6 @@ def write_function(args):
     print('[+] Function generated successfully')
 
 def create_new_project(args):
-    global CURRENT_PROJECT
     '''
     Method for creating new project or
     function from command line arguments
@@ -148,6 +146,7 @@ def create_new_project(args):
     @param args Arguments from argparse
     @return None
     '''
+    global CURRENT_PROJECT
     try:
         if args.name:
             name = RunIt.set_project_name(args.name)
@@ -163,40 +162,81 @@ def create_new_project(args):
         # logger.error(str(e))
         logger.exception(e)
 
-def run_project(args):
+def install_project_dependencies(args):
     global CONFIG_FILE
     CONFIG_FILE = args.config
     
-    RunIt.DOCKER = args.docker
-    RunIt.KUBERNETES = args.kubernetes
-    
     if not CONFIG_FILE and not args.file:
         raise FileNotFoundError
-    else:
-        if not RunIt.has_config_file() and not args.file:
-            raise FileNotFoundError
-        elif args.file:
-            filename = args.file
-            runtime = EXT_TO_RUNTIME[os.path.splitext(filename)[1]]
-            LanguageParser.run_file(filename, runtime)
-        else:
-            project = RunIt(**RunIt.load_config())
+    
+    if not RunIt.has_config_file() and not args.file:
+        raise FileNotFoundError
+    
+    project = RunIt(**RunIt.load_config())
+    project.install_dependency_packages()
+                
+def run_project(args):
+    """
+    Run a project based on the given arguments.
 
-            if args.shell:
-                print(project.serve(args.function, args.arguments))
-            elif args.expose:
-                try:
-                    asyncio.run(start_websocket(project))
-                except KeyboardInterrupt:
-                    sys.exit(1)
-                except Exception:
-                    sys.exit(1)
-            else:
-                start_webserver(project, args.host, args.port)
+    Args:
+        args (argparse.Namespace): The arguments passed to the function.
+
+    Raises:
+        FileNotFoundError: If neither a config file nor a file to run is specified.
+        FileNotFoundError: If the config file is not found.
+
+    Returns:
+        None
+
+    """
+    global CONFIG_FILE
+    CONFIG_FILE = args.config
+
+    RunIt.DOCKER = args.docker
+    RunIt.KUBERNETES = args.kubernetes
+
+    if not CONFIG_FILE and not args.file:
+        raise FileNotFoundError("No config file or file to run")
+
+    if not RunIt.has_config_file() and not args.file:
+        raise FileNotFoundError("Config file not found")
+
+    if args.file:
+        file_name = args.file
+        file_extension = os.path.splitext(file_name)[1]
+        runtime = EXT_TO_RUNTIME[file_extension]
+        LanguageParser.run_file(file_name, runtime)
+    else:
+        project = RunIt(**RunIt.load_config())
+        if args.shell:
+            print(project.serve(args.function, args.arguments))
+        elif args.expose:
+            try:
+                asyncio.run(start_websocket(project))
+            except KeyboardInterrupt:
+                sys.exit(1)
+        else:
+            start_webserver(project, args.host, args.port)
 
 def clone(args):
+    """
+    Clones a project into the specified directory using the given project name.
+    
+    Args:
+        args (argparse.Namespace): The command line arguments parsed by argparse.
+    
+    Returns:
+        None
+    
+    This function first checks if the project directory already exists. If not, it creates the directory.
+    It then clones the project using the Account.clone_project() method and saves the downloaded file to a local directory.
+    The downloaded file is then extracted using the RunIt.extract_project() method.
+    The current working directory is then changed to the project directory.
+    The RunIt.RUNTIME_ENV is set to 'server' and the dependency packages are installed.
+    """
     CURDIR = os.path.realpath(os.curdir)
-    Account.isauthenticated({})
+    Account.isauthenticated()
     # user = Account.user()
     
     project_path = Path(CURDIR, args.project_name).resolve()
@@ -230,7 +270,7 @@ def publish(args):
     # headers = {}
     # headers['Authorization'] = f"Bearer {token}"
 
-    Account.isauthenticated({})
+    Account.isauthenticated()
     user = Account.user()
 
     os.chdir(CURRENT_PROJECT_DIR)
@@ -361,12 +401,8 @@ def get_arguments():
                         help="Natural language description of what the function does")
     generate_parser.set_defaults(func=write_function)
     
-    # run_parser = subparsers.add_parser('run', help='Run current|specified project|function')
-    # run_parser.add_argument('function', default='index', type=str, nargs='?', help='Name of function to run')
-    # run_parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')
-    # run_parser.add_argument('--shell', action='store_true', help='Run function only in shell')
-    # run_parser.add_argument('-x', '--arguments', action='append', default=[], help='Comma separated function arguments')
-    # run_parser.set_defaults(func=run_project)
+    packages_parser = subparsers.add_parser('install', help='Install project dependency packages')  
+    packages_parser.set_defaults(func=install_project_dependencies)
 
     login_parser = subparsers.add_parser('login', help="User account login")
     login_parser.add_argument('--email', type=str, help="Account email address")
@@ -424,6 +460,7 @@ def get_arguments():
     parser.add_argument('--kubernetes', action='store_true', help="Run program using kubernetes")
     parser.add_argument('-f', '--function', default='index', type=str, nargs='?', help='Name of function to run')
     parser.add_argument('--file', type=str, nargs='?', help='Name of file to run')
+    parser.add_argument('--live', action='store_true', help='Run live version of the function')
     parser.add_argument('--shell', action='store_true', help='Run function only in shell')
     parser.add_argument('--expose', action='store_true', help='Expose local project on configured domain')
     parser.add_argument('--host', type=str, default='127.0.0.1', help='Host address to run project on')

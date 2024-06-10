@@ -48,12 +48,9 @@ class Runtime():
             
             result = str(result).strip()
             
-            if self.iruntime == 'php':
-                self.functions = result.split(',')
-            else:
-                self.functions = eval(result)
-
-            for key in self.functions:
+            self.functions = eval(result)
+            
+            for key in self.functions.keys():
                 self.__setattr__(key, self.anon_function)
                 
         except Exception as e:

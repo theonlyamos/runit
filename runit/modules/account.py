@@ -92,7 +92,7 @@ class Account():
             print(str(e))
         
     @staticmethod
-    def isauthenticated(args):
+    def isauthenticated():
         '''
         Check if current user is authenticated
         
@@ -111,6 +111,8 @@ class Account():
             result = request.json()
             if 'detail' in result.keys():
                 raise Exception(result['detail'])
+            elif not len(result.keys()):
+                raise Exception('[Error] User is not authenticated')
 
         except Exception as e:
             print(str(e))
