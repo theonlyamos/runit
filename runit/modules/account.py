@@ -8,17 +8,17 @@ from functools import wraps
 
 import keyring  # type: ignore
 import keyring.errors  # type: ignore
+import json
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('runit.account')
 
-BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/"
-PROJECTS_API = BASE_API + 'projects/'
 RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
 BASE_HEADERS = {'Content-Type': 'application/json'}
 KEYRING_SERVICE = "runit-cli"
@@ -27,6 +27,24 @@ MAX_RETRIES = 3
 RETRY_BACKOFF_FACTOR = 0.5
 RETRY_STATUS_CODES = [429, 500, 502, 503, 504]
 REQUEST_TIMEOUT = 30
+
+
+def get_base_api() -> str:
+    """Get validated API base URL from environment."""
+    endpoint = os.getenv('RUNIT_API_ENDPOINT')
+    if not endpoint:
+        raise RuntimeError(
+            "RUNIT_API_ENDPOINT is not set. Run `runit setup --api http://<host>/api/v1` first."
+        )
+
+    endpoint = endpoint.strip().rstrip('/')
+    parsed = urlparse(endpoint)
+    if not parsed.scheme or not parsed.netloc:
+        raise RuntimeError(
+            f"Invalid RUNIT_API_ENDPOINT: '{endpoint}'. Expected full URL like http://localhost:9000/api/v1"
+        )
+
+    return endpoint + '/'
 
 
 def create_session_with_retry() -> requests.Session:
@@ -142,7 +160,43 @@ class Account():
         @return None
         '''
         try:
-            pass
+            name = args.name
+            email = args.email
+            password = args.password
+            cpassword = getattr(args, 'cpassword', None)
+
+            while not name:
+                name = str(input('Full Name: '))
+            while not email:
+                email = str(input('Email Address: '))
+            while not password:
+                password = getpass()
+            while not cpassword:
+                cpassword = getpass('Confirm Password: ')
+
+            if password != cpassword:
+                print('[Error] Passwords do not match')
+                return
+
+            data = {
+                "name": name,
+                "email": email,
+                "password": password,
+                "cpassword": cpassword
+            }
+            url = get_base_api() + 'register'
+
+            session = get_http_session()
+            response = session.post(url, json=data, timeout=REQUEST_TIMEOUT)
+            result = response.json()
+
+            if 'access_token' in result.keys():
+                load_token(result['access_token'])
+                print('[Success] Registration successful')
+            elif 'detail' in result.keys():
+                print('[Error]', result['detail'])
+            else:
+                print('[Error]', result.get('message', 'Unknown error'))
         except Exception as e:
             print(str(e))
 
@@ -165,7 +219,7 @@ class Account():
                 password = getpass()
 
             data = {"email": email, "password": password}
-            url = BASE_API + 'login'
+            url = get_base_api() + 'login'
 
             session = get_http_session()
             response = session.post(url, json=data, timeout=REQUEST_TIMEOUT)
@@ -205,7 +259,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'account/'
+            url = get_base_api() + 'account/'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
             result = response.json()
@@ -229,7 +283,7 @@ class Account():
         @return dict Account information
         '''
         try:
-            url = BASE_API + 'account/'
+            url = get_base_api() + 'account/'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
             result = response.json()
@@ -251,7 +305,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'account/'
+            url = get_base_api() + 'account/'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
             result = response.json()
@@ -281,7 +335,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'projects/'
+            url = get_base_api() + 'projects/'
 
             if args.id:
                 url += f'{args.id}'
@@ -319,7 +373,7 @@ class Account():
         @return requests response
         '''
         try:
-            url = PROJECTS_API + 'publish'
+            url = get_base_api() + 'projects/publish'
             session = get_http_session()
             
             headers = Account._get_headers()
@@ -332,7 +386,14 @@ class Account():
                 headers=headers,
                 timeout=REQUEST_TIMEOUT * 2
             )
-            result = response.json()
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                message = response.text.strip() if response.text else "Empty response from server"
+                return {
+                    "status": "error",
+                    "message": f"Publish request failed with HTTP {response.status_code}: {message[:300]}"
+                }
             
             return result
 
@@ -350,7 +411,7 @@ class Account():
         @return requests response
         '''
         try:
-            url = BASE_API + f'projects/clone/{project}'
+            url = get_base_api() + f'projects/clone/{project}'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT * 2)
 
@@ -387,7 +448,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + f'projects/{args.id}'
+            url = get_base_api() + f'projects/{args.id}'
 
             data = {}
             raw = args.data
@@ -416,7 +477,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + f'projects/{args.id}'
+            url = get_base_api() + f'projects/{args.id}'
 
             session = get_http_session()
             response = session.delete(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
@@ -435,7 +496,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'functions'
+            url = get_base_api() + 'functions'
 
             if args.project:
                 url += f'/{args.project}'

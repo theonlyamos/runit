@@ -376,6 +376,7 @@ def get_arguments():
     register_parser.add_argument('--name', type=str, help="Account user's name")
     register_parser.add_argument('--email', type=str, help="Account email address")
     register_parser.add_argument('--password', type=str, help="Account password")
+    register_parser.add_argument('--cpassword', type=str, help="Confirm account password")
     register_parser.set_defaults(func=Account.register)
 
     account_parser = subparsers.add_parser('account', help='Get Current logged in user info')
