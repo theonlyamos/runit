@@ -1,13 +1,26 @@
 # Example: reuse your existing OpenAI setup
+import os
 from typing import Optional
-from openai import OpenAI
 import asyncio
 
-# Point to the local server
-client = OpenAI(base_url="http://localhost:1234/v1", api_key="not-needed")
+OPENAI_BASE_URL = os.getenv('RUNIT_OPENAI_BASE_URL', 'http://localhost:1234/v1')
+OPENAI_API_KEY = os.getenv('RUNIT_OPENAI_API_KEY', 'not-needed')
+OPENAI_MODEL = os.getenv('RUNIT_OPENAI_MODEL', 'local-model')
 
 
-SYSMTEM_PROMPT = f"""I am an expert compuer programmer. I am able to generate function code in the given programming language when given a natural language description of the function. 
+def get_openai_client():
+    """Get configured OpenAI client."""
+    try:
+        from openai import OpenAI
+        return OpenAI(base_url=OPENAI_BASE_URL, api_key=OPENAI_API_KEY)
+    except ImportError:
+        raise ImportError(
+            "OpenAI package not installed. "
+            "Install with: pip install openai"
+        )
+
+
+SYSTEM_PROMPT = """I am an expert computer programmer. I am able to generate function code in the given programming language when given a natural language description of the function. 
 I am able to handle a variety of programming languages, including Python, JavaScript, PHP.
 
 Prompt:
@@ -96,18 +109,10 @@ async def _call_openai(prompt: str):
     """
     Call the OpenAI API to generate completions for the prompt.
     """
-
-    openai_client = OpenAI(base_url="http://localhost:1234/v1", api_key="not-needed")
-    
-    messages = [
-        {"role": "system", "content": SYSMTEM_PROMPT},
-        {"role": "user", "content": prompt}
-    ]
-    
-    model = 'local-model'
+    openai_client = get_openai_client()
     
     return openai_client.completions.create(
-        model=model,
+        model=OPENAI_MODEL,
         prompt=prompt,
         temperature=0.2
     )

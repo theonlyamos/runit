@@ -1,5 +1,7 @@
 import os
-from subprocess import check_output
+import ast
+import json
+import subprocess
 
 from ..constants import EXT_TO_RUNTIME, EXT_TO_LOADER, EXT_TO_RUNNER
 from .runtime import Runtime
@@ -48,15 +50,20 @@ class Multi(Runtime):
                     runtime = EXT_TO_RUNTIME[extension]
 
                     full_path = os.path.join(os.path.realpath(os.curdir), lfile)
-                    result = check_output(f'{runtime} {loader} {full_path}', shell=True, encoding='utf-8')
+                    result = subprocess.run(
+                        [runtime, loader, full_path],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    ).stdout
                     result = result.strip()
                     
-                    if os.path.splitext(lfile)[1] == '.php':
+                    if extension == '.php':
                         loaded_functions = result.split(',')
-                    elif os.path.splitext(lfile)[1] == '.js':
-                        loaded_functions = eval(result.strip())
+                    elif extension == '.js':
+                        loaded_functions = json.loads(result)
                     else:
-                        loaded_functions = eval(result)
+                        loaded_functions = ast.literal_eval(result)
                     
                     for func in loaded_functions:
                         self.functions[func] = {
@@ -85,18 +92,30 @@ class Multi(Runtime):
         return [func for func in self.functions.keys()]
     
     def anon_function(self, *args):
-        args = ', '.join(args)
+        args_str = ', '.join(args)
         try:
             loaded_function = self.functions[self.current_func]
             runtime = loaded_function['runtime']
             runner = loaded_function['runner']
             module = loaded_function['module']
             
-            if len(args):
-                result = check_output(f'{runtime} {runner} {module} {self.current_func} "{args}"', shell=True, encoding='utf-8')
+            if len(args_str):
+                result = subprocess.run(
+                    [runtime, runner, module, self.current_func, args_str],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                ).stdout
             else:
-                result = check_output(f'{runtime} {runner} {module} {self.current_func}', shell=True, encoding='utf-8')
+                result = subprocess.run(
+                    [runtime, runner, module, self.current_func],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                ).stdout
 
             return result.strip()
+        except subprocess.CalledProcessError as e:
+            return e.stderr if e.stderr else str(e)
         except Exception as e:
             return str(e)

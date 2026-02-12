@@ -1,34 +1,137 @@
 import os
 import sys
-import shelve
+import time
+import logging
 from getpass import getpass
+from typing import Optional, Dict, Any
+from functools import wraps
 
+import keyring  # type: ignore
+import keyring.errors  # type: ignore
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from dotenv import load_dotenv
 
-# from ..constants import API_VERSION
-
 load_dotenv()
-BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/"
-PROJECTS_API = BASE_API+'projects/'
-RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
-BASE_HEADERS = {}
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('runit.account')
 
-def load_token(access_token = None):
-    curdir = os.curdir
-    os.chdir(RUNIT_HOMEDIR)
-    with shelve.open('account') as account:
-        if access_token is None and 'access_token' in account.keys():
-            return account['access_token']
-        if access_token:
-            account['access_token'] = access_token
+BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/"
+PROJECTS_API = BASE_API + 'projects/'
+RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
+BASE_HEADERS = {'Content-Type': 'application/json'}
+KEYRING_SERVICE = "runit-cli"
+
+MAX_RETRIES = 3
+RETRY_BACKOFF_FACTOR = 0.5
+RETRY_STATUS_CODES = [429, 500, 502, 503, 504]
+REQUEST_TIMEOUT = 30
+
+
+def create_session_with_retry() -> requests.Session:
+    """Create a requests session with connection pooling and retry logic."""
+    session = requests.Session()
+    
+    retry_strategy = Retry(
+        total=MAX_RETRIES,
+        backoff_factor=RETRY_BACKOFF_FACTOR,
+        status_forcelist=RETRY_STATUS_CODES,
+        allowed_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+        raise_on_status=False
+    )
+    
+    adapter = HTTPAdapter(
+        max_retries=retry_strategy,
+        pool_connections=10,
+        pool_maxsize=20
+    )
+    
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    
+    return session
+
+
+_http_session: Optional[requests.Session] = None
+
+
+def get_http_session() -> requests.Session:
+    """Get or create the shared HTTP session."""
+    global _http_session
+    if _http_session is None:
+        _http_session = create_session_with_retry()
+    return _http_session
+
+
+def with_retry(max_retries: int = MAX_RETRIES, backoff_factor: float = RETRY_BACKOFF_FACTOR):
+    """Decorator for retry logic with exponential backoff."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except (requests.exceptions.ConnectionError, 
+                        requests.exceptions.Timeout,
+                        requests.exceptions.HTTPError) as e:
+                    if attempt < max_retries:
+                        wait_time = backoff_factor * (2 ** attempt)
+                        logger.warning(f"Request failed (attempt {attempt + 1}/{max_retries + 1}), "
+                                      f"retrying in {wait_time:.1f}s: {e}")
+                        time.sleep(wait_time)
+                    else:
+                        logger.error(f"Request failed after {max_retries + 1} attempts: {e}")
+                        raise
+            raise RuntimeError("Unexpected state in retry logic")
+        return wrapper
+    return decorator
+
+
+def load_token(access_token=None):
+    """
+    Securely store and retrieve access tokens using system keyring.
+    
+    Args:
+        access_token: If provided, stores the token. If None, retrieves it.
+                     If empty string, deletes the token.
+    
+    Returns:
+        The stored token when retrieving, None otherwise.
+    
+    Raises:
+        RuntimeError: If keyring backend is unavailable.
+    """
+    try:
+        if access_token is None:
+            return keyring.get_password(KEYRING_SERVICE, "access_token")
+        elif access_token:
+            keyring.set_password(KEYRING_SERVICE, "access_token", access_token)
+            return None
         else:
-            account['access_token'] = ''
-    os.chdir(curdir)
-    return None
+            try:
+                keyring.delete_password(KEYRING_SERVICE, "access_token")
+            except keyring.errors.PasswordDeleteError:
+                pass
+            return None
+    except keyring.errors.KeyringError as e:
+        raise RuntimeError(
+            f"Keyring backend unavailable: {e}. "
+            "Please install a keyring backend for your OS."
+        ) from e
+
 
 class Account():
     '''Class for managing user account'''
+
+    @staticmethod
+    def _get_headers() -> Dict[str, str]:
+        """Get headers with authorization token."""
+        headers = BASE_HEADERS.copy()
+        token = load_token()
+        if token:
+            headers['Authorization'] = f"Bearer {token}"
+        return headers
 
     @staticmethod
     def register(args):
@@ -44,14 +147,14 @@ class Account():
             print(str(e))
 
     @staticmethod
+    @with_retry()
     def login(args):
         '''
-        Accoun Login Method
+        Account Login Method
 
         @args Input from argparse containing email and password
         @return None
         '''
-
         try:
             email = args.email
             password = args.password
@@ -64,19 +167,20 @@ class Account():
             data = {"email": email, "password": password}
             url = BASE_API + 'login'
 
-            request = requests.post(url, json=data)
-
-            result = request.json()
+            session = get_http_session()
+            response = session.post(url, json=data, timeout=REQUEST_TIMEOUT)
+            result = response.json()
 
             if 'access_token' in result.keys():
-                token = load_token(result['access_token'])
+                load_token(result['access_token'])
                 print('[Success] Logged in successfully')
             elif 'detail' in result.keys():
                 print('[Error]', result['detail'])
             else:
-                print('[Error]', result['message'])
+                print('[Error]', result.get('message', 'Unknown error'))
         except Exception as e:
             print(str(e))
+
     @staticmethod
     def logout(args):
         '''
@@ -86,12 +190,13 @@ class Account():
         @return None
         '''
         try:
-            token = load_token('')
+            load_token('')
             print('[Success] Logged out successfully!')
         except Exception as e:
             print(str(e))
-        
+
     @staticmethod
+    @with_retry()
     def isauthenticated():
         '''
         Check if current user is authenticated
@@ -100,15 +205,11 @@ class Account():
         @return None
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + 'account/'
-
-            request = requests.get(url, headers=BASE_HEADERS)
-            result = request.json()
+            session = get_http_session()
+            response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            result = response.json()
+            
             if 'detail' in result.keys():
                 raise Exception(result['detail'])
             elif not len(result.keys()):
@@ -117,34 +218,31 @@ class Account():
         except Exception as e:
             print(str(e))
             sys.exit(1)
-    
+
     @staticmethod
-    def user()-> dict:
+    @with_retry()
+    def user() -> dict:
         '''
         Retrieve account details
         
         @param args Input from argparse
-        @return None
+        @return dict Account information
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + 'account/'
-
-            request = requests.get(url, headers=BASE_HEADERS)
-            result = request.json()
+            session = get_http_session()
+            response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            result = response.json()
+            
             if 'detail' in result.keys():
                 raise Exception(result['detail'])
             return result
 
         except Exception as e:
-            #print(str(e))
             return {}
-  
+
     @staticmethod
+    @with_retry()
     def info(args):
         '''
         Retrieve account details
@@ -153,20 +251,15 @@ class Account():
         @return None
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + 'account/'
-            
-            request = requests.get(url, headers=BASE_HEADERS)
-            result = request.json()
+            session = get_http_session()
+            response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            result = response.json()
 
             if 'message' in result.keys():
-                raise Exception('[Error] '+result['message'])
+                raise Exception('[Error] ' + result['message'])
             if 'detail' in result.keys():
-                raise Exception('[Error] '+result['detail'])
+                raise Exception('[Error] ' + result['detail'])
             print()
             for key, value in result.items():
                 if len(key) < 7:
@@ -177,8 +270,9 @@ class Account():
         except Exception as e:
             print(str(e))
             sys.exit(1)
-    
+
     @staticmethod
+    @with_retry()
     def projects(args):
         '''
         Retrieve Project Info
@@ -187,18 +281,15 @@ class Account():
         @return None
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + 'projects/'
 
             if args.id:
                 url += f'{args.id}'
 
-            request = requests.get(url, headers=BASE_HEADERS)
-            results = request.json()
-            
+            session = get_http_session()
+            response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            results = response.json()
+
             if isinstance(results, dict):
                 print()
                 for key, value in results.items():
@@ -212,59 +303,59 @@ class Account():
                     print(f"ID:\t\t{project['id']}")
                     print(f"Name:\t\t{project['name']}")
                     print(f"Description:\t{project['description']}")
-                    print("="*20)
+                    print("=" * 20)
 
         except Exception as e:
             print(str(e))
-    
+
     @staticmethod
+    @with_retry()
     def publish_project(files, data: dict):
         '''
-        Retrieve account details
+        Publish project to server
         
         @param files Zipfile of project
         @param data Project Config
         @return requests response
         '''
-        
         try:
-            global BASE_HEADERS
-            token = load_token()
-
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
             url = PROJECTS_API + 'publish'
-
-            req = requests.post(url, data=data, 
-                        files=files, headers=BASE_HEADERS)
-            result = req.json()
+            session = get_http_session()
+            
+            headers = Account._get_headers()
+            headers.pop('Content-Type', None)
+            
+            response = session.post(
+                url, 
+                data=data, 
+                files=files, 
+                headers=headers,
+                timeout=REQUEST_TIMEOUT * 2
+            )
+            result = response.json()
             
             return result
 
         except Exception as e:
             print(str(e))
             sys.exit(1)
-    
+
     @staticmethod
+    @with_retry()
     def clone_project(project: str):
         '''
         Clone project to current directory
         
-        @param files Zipfile of project
-        @param data Project Config
+        @param project Project ID or name
         @return requests response
         '''
-        
         try:
-            global BASE_HEADERS
-            token = load_token()
-
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-            
             url = BASE_API + f'projects/clone/{project}'
+            session = get_http_session()
+            response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT * 2)
 
-            response = requests.get(url, headers=BASE_HEADERS)
-
-            if (response.headers['Content-Type'] == 'application/json'):
+            content_type = response.headers.get('Content-Type', '')
+            if 'application/json' in content_type:
                 result = response.json()
 
                 if 'message' in result.keys() and len(result['message']):
@@ -275,7 +366,7 @@ class Account():
         except Exception as e:
             print(str(e))
             sys.exit(1)
-    
+
     @staticmethod
     def create_project(args):
         '''
@@ -285,8 +376,9 @@ class Account():
         @return None
         '''
         pass
-    
+
     @staticmethod
+    @with_retry()
     def update_project(args):
         '''
         Static Method for updating Project
@@ -295,25 +387,27 @@ class Account():
         @return None
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + f'projects/{args.id}'
 
             data = {}
             raw = args.data
             for r in raw:
-                key, value = r.split('=')
-                data[key] = value
-            
-            request = requests.post(url, json=data, headers=BASE_HEADERS)
-            print(request.json())
+                try:
+                    key, value = r.split('=', 1)
+                    data[key.strip()] = value.strip()
+                except ValueError:
+                    print(f"[Error] Invalid data format: '{r}'. Expected 'key=value'")
+                    continue
+
+            session = get_http_session()
+            response = session.post(url, json=data, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            print(response.json())
 
         except Exception as e:
             print(str(e))
-    
+
     @staticmethod
+    @with_retry()
     def delete_project(args):
         '''
         Static Method for deleting Project
@@ -322,19 +416,17 @@ class Account():
         @return None
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + f'projects/{args.id}'
 
-            request = requests.delete(url, headers=BASE_HEADERS)
-            print(request.json())
+            session = get_http_session()
+            response = session.delete(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            print(response.json())
 
         except Exception as e:
             print(str(e))
-    
+
     @staticmethod
+    @with_retry()
     def functions(args):
         '''
         Retrieve Functions
@@ -343,10 +435,6 @@ class Account():
         @return None
         '''
         try:
-            global BASE_HEADERS
-            token = load_token()
-            BASE_HEADERS['Authorization'] = f"Bearer {token}"
-
             url = BASE_API + 'functions'
 
             if args.project:
@@ -355,8 +443,9 @@ class Account():
             if args.id:
                 url += f'/{args.id}'
 
-            request = requests.get(url, headers=BASE_HEADERS)
-            print(request.json())
+            session = get_http_session()
+            response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
+            print(response.json())
 
         except Exception as e:
             print(str(e))

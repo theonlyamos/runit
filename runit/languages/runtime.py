@@ -1,7 +1,9 @@
 import os
+import ast
+import time
+import subprocess
 from typing import Callable
 from datetime import datetime, timedelta
-from subprocess import check_output
 
 from dotenv import load_dotenv
 from ..constants import EXT_TO_RUNTIME
@@ -15,16 +17,17 @@ class Runtime():
     '''
     LOADER = ""
     RUNNER = ""
+    _function_cache = {}
+    _cache_ttl = 300
     
     def __init__(self, filename="", runtime="", is_file = False, is_docker=False, project_id=''):
-        # extension = os.path.splitext(filename)[1].lower()
         self.filename = filename
         self.iruntime = runtime
         self.is_file = is_file
         self.is_docker = is_docker
         self.project_id = project_id
         self.module = os.path.realpath(os.path.join(os.curdir, self.filename))
-        self.functions = []
+        self.functions = {}
         self.current_func: str = 'index'
         self.load_functions_from_supported_files()
     
@@ -38,17 +41,42 @@ class Runtime():
         '''
         
         try:
+            if os.path.exists(self.module):
+                mtime = os.path.getmtime(self.module)
+                cache_key = (self.module, mtime)
+                
+                if cache_key in Runtime._function_cache:
+                    cached_data = Runtime._function_cache[cache_key]
+                    if time.time() - cached_data['timestamp'] < Runtime._cache_ttl:
+                        self.functions = cached_data['functions']
+                        for key in self.functions.keys():
+                            self.__setattr__(key, self.anon_function)
+                        return
+            
             if self.is_docker:
                 import docker
                 client = docker.from_env()
 
-                result = client.containers.run(self.project_id, f'{self.LOADER} {self.module}', auto_remove=True)
+                result = client.containers.run(self.project_id, [self.LOADER, self.module], auto_remove=True)
             else:
-                result = check_output(f'{self.iruntime} {self.LOADER} {self.module}', shell=True, encoding='utf-8')
+                result = subprocess.run(
+                    [self.iruntime, self.LOADER, self.module],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                ).stdout
             
             result = str(result).strip()
             
-            self.functions = eval(result)
+            self.functions = ast.literal_eval(result)
+            
+            if os.path.exists(self.module):
+                mtime = os.path.getmtime(self.module)
+                cache_key = (self.module, mtime)
+                Runtime._function_cache[cache_key] = {
+                    'functions': self.functions,
+                    'timestamp': time.time()
+                }
             
             for key in self.functions.keys():
                 self.__setattr__(key, self.anon_function)
@@ -66,19 +94,37 @@ class Runtime():
         return [func for func in self.functions]
 
     def anon_function(self, *args):
-        args = ', '.join(args)
+        args_str = ', '.join(args)
         try:
             if len(args):
                 if self.is_file:
-                    return os.system(f'{self.iruntime} {self.filename} "{args}"')
+                    return subprocess.run(
+                        [self.iruntime, self.filename, args_str],
+                        check=True
+                    ).returncode
                 else:
-                    result = check_output(f'{self.iruntime} {self.RUNNER} {self.module} {self.current_func} "{args}"', shell=True, encoding='utf-8')
+                    result = subprocess.run(
+                        [self.iruntime, self.RUNNER, self.module, self.current_func, args_str],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    ).stdout
             else:
                 if self.is_file:
-                    return os.system(f'{self.iruntime} {self.filename}')
+                    return subprocess.run(
+                        [self.iruntime, self.filename],
+                        check=True
+                    ).returncode
                 else:
-                    result = check_output(f'{self.iruntime} {self.RUNNER} {self.module} {self.current_func}', shell=True, encoding='utf-8')
+                    result = subprocess.run(
+                        [self.iruntime, self.RUNNER, self.module, self.current_func],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    ).stdout
 
             return result.strip()
+        except subprocess.CalledProcessError as e:
+            return e.stderr if e.stderr else str(e)
         except Exception as e:
             return str(e)
