@@ -23,12 +23,14 @@ class Python(Runtime):
     _module_mtimes: Dict[str, float] = {}
 
     def __init__(self, filename, runtime, is_file=False, is_docker=False, project_id=''):
-        super().__init__(filename, runtime, is_file, is_docker, project_id)
         self._loaded_module = None
         self._loaded_functions: Dict[str, Callable] = {}
+        self.module = os.path.realpath(os.path.join(os.curdir, filename))
         
         if not is_file and not is_docker:
             self._load_module_in_memory()
+        
+        super().__init__(filename, runtime, is_file, is_docker, project_id)
 
     def _load_module_in_memory(self):
         """Load the Python module directly into memory for faster execution."""
