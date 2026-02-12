@@ -9,6 +9,7 @@ from zipfile import ZipFile
 from io import TextIOWrapper
 from typing import Optional, Union, Callable
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from dotenv import load_dotenv
 
@@ -52,6 +53,8 @@ class RunIt:
         self.author = author
         self.config = {}
         self.start_file = start_file if start_file else STARTER_FILES[self.language]
+        self._lang_parser = None
+        self._lang_parser_mtime = None
         self.create_config()
         
         if not RunIt.has_config_file() and not is_file:
@@ -68,6 +71,24 @@ class RunIt:
     
     def __repr__(self):
         return json.dumps(self.config, indent=4)
+    
+    @property
+    def lang_parser(self):
+        """Lazy-loaded language parser with file change detection."""
+        if self.start_file and os.path.exists(self.start_file):
+            current_mtime = os.path.getmtime(self.start_file)
+            if self._lang_parser is None or self._lang_parser_mtime != current_mtime:
+                runtime = self.runtime
+                if 'python' in runtime:
+                    runtime = os.path.realpath(self.PYTHON_PATHS[sys.platform])
+                self._lang_parser = LanguageParser.detect_language(
+                    filename=self.start_file,
+                    runtime=runtime,
+                    is_docker=RunIt.DOCKER,
+                    project_id=self._id
+                )
+                self._lang_parser_mtime = current_mtime
+        return self._lang_parser
 
     @staticmethod
     def exists(name):
@@ -142,16 +163,8 @@ class RunIt:
         os.unlink(filepath)
     
     def get_functions(self)->list:
-        if 'python' in self.runtime:
-            self.runtime = os.path.realpath(self.PYTHON_PATHS[sys.platform])
-        
-        lang_parser = LanguageParser.detect_language(
-            filename=self.start_file, 
-            runtime=self.runtime, 
-            is_docker=RunIt.DOCKER, 
-            project_id=self._id
-        )
-        return lang_parser.list_functions()
+        parser = self.lang_parser
+        return parser.list_functions() if parser else []
     
     @staticmethod
     def dockerize(project_path: str):
@@ -258,12 +271,12 @@ class RunIt:
     def serve(self, func: str = 'index', args: Optional[Union[dict,list]]=None):
         global NOT_FOUND_FILE
         
-        if 'python' in self.runtime:
-            self.runtime = self.PYTHON_PATHS[sys.platform]
+        lang_parser = self.lang_parser
         
-        lang_parser = LanguageParser.detect_language(self.start_file, self.runtime)
+        if lang_parser is None:
+            return RunIt.notfound()
         
-        if not func in lang_parser.functions:
+        if func not in lang_parser.functions:
             return RunIt.notfound()
         
         setattr(lang_parser, 'current_func', func)
@@ -273,7 +286,7 @@ class RunIt:
 
         args_list = args if type(args) is list  else []
 
-        parameters = lang_parser.functions[func] # type: ignore
+        parameters = lang_parser.functions[func]
 
         try:
             if len(parameters):
@@ -327,28 +340,49 @@ class RunIt:
         config_file.close()
     
     def get_exclude_list(self):
-        exclude_list = [self.name + '.zip', '.env', 'account.db', '.git', '.venv', 'venv', 'Dockerfile', '__pycache__']
+        """Get exclude list as a set for O(1) lookups."""
+        exclude_set = {self.name + '.zip', '.env', 'account.db', '.git', '.venv', 'venv', 'Dockerfile', '__pycache__'}
         
         if os.path.exists(DOT_RUNIT_IGNORE):
             with open(DOT_RUNIT_IGNORE, 'rt') as file:
-                exclude_list.extend(os.path.normpath(line.strip()) for line in file if line.strip())
+                exclude_set.update(os.path.normpath(line.strip()) for line in file if line.strip())
         
-        exclude_list = [item for item in exclude_list if item != '.']
-        return exclude_list
+        exclude_set.discard('.')
+        return exclude_set
     
     def compress(self):
+        """Compress project files efficiently."""
         zipname = f'{self.name}.zip'
-        exclude_list = self.get_exclude_list()
+        exclude_set = self.get_exclude_list()
+
+        def should_exclude(filepath: str) -> bool:
+            """Check if file/directory should be excluded."""
+            basename = os.path.basename(filepath)
+            parts = os.path.normpath(filepath).split(os.sep)
+            
+            if basename in exclude_set:
+                return True
+            
+            for part in parts:
+                if part in exclude_set:
+                    return True
+            
+            return False
 
         with ZipFile(zipname, 'w') as zipobj:
             logger.info('[!] Compressing Project Files...')
+            file_count = 0
+            
             for folder_name, subfolders, filenames in os.walk(os.curdir):
-                if any(os.path.normpath(os.path.dirname(folder_name)).split(os.path.sep)[0] not in exclude_list for filename in filenames):
-                    for filename in filenames:
-                        filepath = os.path.join(folder_name, filename)
-                        if os.path.basename(filepath) not in exclude_list and '__pycache__' not in folder_name:
-                            zipobj.write(filepath, filepath)
-                            logger.info(f'[{filepath}] Compressed!')
+                subfolders[:] = [s for s in subfolders if not should_exclude(s)]
+                
+                for filename in filenames:
+                    filepath = os.path.join(folder_name, filename)
+                    if not should_exclude(filepath):
+                        zipobj.write(filepath, filepath)
+                        file_count += 1
+            
+            logger.info(f'[+] Compressed {file_count} files')
             logger.info(f'[!] Filename: {zipname}')
             
         return zipname
@@ -406,13 +440,32 @@ class RunIt:
         packaging_functions[self.language]()
     
     def install_all_language_packages(self):
+        """Install packages for all languages in parallel."""
         try:
-            logger.info("[+] Installing all packages...")
-            self.update_and_install_package_json()
-            self.update_and_install_composer_json()
-            self.install_python_packages()
-        except Exception:
-            logger.warning("[!] Couldn't install packages")
+            logger.info("[+] Installing all packages in parallel...")
+            
+            install_tasks = [
+                ('Node.js', self.update_and_install_package_json),
+                ('PHP/Composer', self.update_and_install_composer_json),
+                ('Python', self.install_python_packages),
+            ]
+            
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = {
+                    executor.submit(task[1]): task[0]
+                    for task in install_tasks
+                }
+                
+                for future in as_completed(futures):
+                    lang = futures[future]
+                    try:
+                        future.result()
+                        logger.info(f"[+] {lang} packages installed successfully")
+                    except Exception as e:
+                        logger.warning(f"[!] {lang} package installation failed: {e}")
+                        
+        except Exception as e:
+            logger.warning(f"[!] Package installation error: {e}")
             logger.debug(INSTALL_MODULE_LATER_MESSAGE)
     
     def update_and_install_package_json(self):

@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import time
-import shelve
 import getpass
 import asyncio
 import logging
@@ -20,6 +19,7 @@ from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
 from .generate import generate_function
 from .languages import LanguageParser
 from .modules import Account
+from .modules.account import load_token
 from .runit import RunIt
 from .constants import (
     VERSION, CURRENT_PROJECT, CURRENT_PROJECT_DIR,
@@ -321,46 +321,9 @@ def publish(args):
         print(f"[-] {func_url}")
 
 def setup_runit(args):
-    '''
-    Setup Runit server side api settings
-    
-    @params args
-    @return None
-    '''
-    try:
-        if not find_dotenv(str(Path(RUNIT_HOMEDIR, '.env'))):
-            env_path = Path(RUNIT_HOMEDIR, '.env')
-            env_path.touch()
-            set_key(find_dotenv(), 'RUNIT_API_ENDPOINT', '')
-            # set_key(find_dotenv(), 'RUNIT_PROJECT_ID', '')
-            
-        settings = dotenv_values(find_dotenv())
-        
-        if args.api:
-            settings['RUNIT_API_ENDPOINT'] = args.api
-        else:
-            for key, value in settings.items():
-                new_value = input(f'{key} [{value}]: ').strip()
-                if new_value:
-                    settings[key] = new_value 
-                else:
-                    logger.debug(f'{key} cannot be empty')
-                    logger.info(f'Setting {key} to default [{value}]')
-        
-        for key, value in settings.items():
-            set_key(find_dotenv(), key, str(value))
-    except Exception as e:
-        logger.error(str(e))
-
-def load_token(access_token = None):
-    with shelve.open('account') as account:
-        if access_token is None and 'access_token' in account.keys():
-            return account['access_token']
-        if access_token:
-            account['access_token'] = access_token
-        else:
-            account['access_token'] = ''
-        return None
+    '''Setup Runit server side api settings'''
+    from .core import RunitServerSetup
+    RunitServerSetup.setup_runit(args)
 
 def is_file(string):
     if (os.path.isfile(os.path.join(os.curdir, string))):
