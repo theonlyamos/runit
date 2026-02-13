@@ -73,17 +73,21 @@ Run ```runit setup --help``` for help message.
 runit setup
 ```
 
-**Account Login**
+**Account Authentication**
 ```shell
-runit login --help
+runit auth --help
 ```
+***Authenticate in browser (recommended)***
 ```shell
-runit login --email <email@example.org> --password <supersecretpass>
+runit auth
 ```
-**or**
-***Follow the commands after running below command***
+***Print auth URL without opening browser***
 ```shell
-runit login
+runit auth --no-open
+```
+***Store token directly for CI/headless environments***
+```shell
+runit auth --token <access-token>
 ```
 
 **Deploy/Publish Project**

@@ -2,6 +2,9 @@ import os
 import sys
 import time
 import logging
+import threading
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from getpass import getpass
 from typing import Optional, Dict, Any
 from functools import wraps
@@ -12,7 +15,7 @@ import json
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode, parse_qs
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -150,6 +153,106 @@ class Account():
         if token:
             headers['Authorization'] = f"Bearer {token}"
         return headers
+
+    @staticmethod
+    def _get_base_web() -> str:
+        """Derive base web URL from configured API URL."""
+        api_url = get_base_api().rstrip("/")
+        parsed = urlparse(api_url)
+        path = parsed.path.rstrip("/")
+
+        if path.endswith("/api/v1"):
+            path = path[: -len("/api/v1")]
+        elif "/api/" in path:
+            path = path.split("/api/", maxsplit=1)[0]
+
+        web_url = parsed._replace(path=path or "", params="", query="", fragment="").geturl().rstrip("/")
+        if not web_url:
+            raise RuntimeError("Unable to derive web URL from RUNIT_API_ENDPOINT")
+        return web_url
+
+    @staticmethod
+    def auth(args):
+        """
+        Authenticate in browser and receive token via local callback server.
+        """
+        try:
+            direct_token = getattr(args, 'token', None)
+            if direct_token:
+                load_token(str(direct_token).strip())
+                print('[Success] Token stored successfully')
+                return
+
+            web_base = Account._get_base_web()
+            callback_state: Dict[str, Optional[str]] = {"access_token": None, "error": None}
+            callback_complete = threading.Event()
+
+            class CallbackHandler(BaseHTTPRequestHandler):
+                def log_message(self, format, *args):
+                    return
+
+                def do_GET(self):
+                    parsed_path = urlparse(self.path)
+                    if parsed_path.path != '/callback':
+                        self.send_response(404)
+                        self.end_headers()
+                        self.wfile.write(b'Not Found')
+                        return
+
+                    params = parse_qs(parsed_path.query)
+                    access_token = params.get('access_token', [None])[0]
+
+                    if access_token:
+                        callback_state["access_token"] = access_token
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        self.wfile.write(
+                            b"<html><body><h3>Authentication complete.</h3>"
+                            b"<p>You can close this window and return to your terminal.</p></body></html>"
+                        )
+                    else:
+                        callback_state["error"] = "Missing access token in callback response"
+                        self.send_response(400)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        self.wfile.write(
+                            b"<html><body><h3>Authentication failed.</h3>"
+                            b"<p>Access token was not received.</p></body></html>"
+                        )
+                    callback_complete.set()
+
+            callback_server = ThreadingHTTPServer(('127.0.0.1', 0), CallbackHandler)
+            callback_port = callback_server.server_address[1]
+            callback_thread = threading.Thread(target=callback_server.serve_forever, daemon=True)
+            callback_thread.start()
+
+            redirect_uri = f"http://127.0.0.1:{callback_port}/callback"
+            auth_url = f"{web_base}/auth/cli?{urlencode({'redirect_uri': redirect_uri})}"
+
+            print("[Info] Waiting for browser authentication...")
+            print(f"[Info] If browser does not open, visit: {auth_url}")
+
+            if not getattr(args, 'no_open', False):
+                webbrowser.open(auth_url)
+
+            completed = callback_complete.wait(timeout=300)
+            callback_server.shutdown()
+            callback_server.server_close()
+            callback_thread.join(timeout=2)
+
+            if not completed:
+                print('[Error] Authentication timed out after 5 minutes')
+                return
+
+            if callback_state["access_token"]:
+                load_token(callback_state["access_token"])
+                print('[Success] Logged in successfully')
+                return
+
+            print(f"[Error] {callback_state['error'] or 'Authentication failed'}")
+        except Exception as e:
+            print(str(e))
 
     @staticmethod
     def register(args):
