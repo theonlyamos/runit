@@ -482,7 +482,8 @@ class RunIt:
         
         try:
             logger.info('[-] Installing node modules...')
-            os.system(f'{self.runtime if self.runtime == 'bun' else 'npm'} install')
+            manager = 'bun' if self.runtime == 'bun' else 'npm'
+            os.system(f'{manager} install')
         except Exception as e:
             logger.exception(str(e))
             logger.error("[!] Couldn't install modules")
