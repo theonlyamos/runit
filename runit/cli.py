@@ -367,16 +367,10 @@ def get_arguments():
     packages_parser = subparsers.add_parser('install', help='Install project dependency packages')  
     packages_parser.set_defaults(func=install_project_dependencies)
 
-    login_parser = subparsers.add_parser('login', help="User account login")
-    login_parser.add_argument('--email', type=str, help="Account email address")
-    login_parser.add_argument('--password', type=str, help="Account password")
-    login_parser.set_defaults(func=Account.login)
-
-    register_parser = subparsers.add_parser('register', help="Register new account")
-    register_parser.add_argument('--name', type=str, help="Account user's name")
-    register_parser.add_argument('--email', type=str, help="Account email address")
-    register_parser.add_argument('--password', type=str, help="Account password")
-    register_parser.set_defaults(func=Account.register)
+    auth_parser = subparsers.add_parser('auth', help="Authenticate with browser")
+    auth_parser.add_argument('--no-open', action='store_true', help="Print auth URL without opening browser")
+    auth_parser.add_argument('--token', type=str, help="Store access token directly (for CI/headless)")
+    auth_parser.set_defaults(func=Account.auth)
 
     account_parser = subparsers.add_parser('account', help='Get Current logged in user info')
     account_parser.add_argument('-i', '--info', action='store_true', help="Print out current account info")

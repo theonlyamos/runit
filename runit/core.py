@@ -13,7 +13,7 @@ from pathlib import Path
 from dotenv import find_dotenv, dotenv_values, set_key
 
 from .constants import (
-    RUNIT_HOMEDIR, SERVER_HOST, SERVER_PORT
+    RUNIT_HOMEDIR, SERVER_HOST, SERVER_PORT, VERSION
 )
 
 logging.basicConfig(
@@ -96,7 +96,7 @@ class WebServer:
         app = FastAPI(
             title="Runit Server",
             description="Serverless function execution server",
-            version="0.4.3",
+            version=VERSION,
             lifespan=lifespan
         )
         return app

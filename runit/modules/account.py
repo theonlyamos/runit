@@ -2,23 +2,26 @@ import os
 import sys
 import time
 import logging
+import threading
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from getpass import getpass
 from typing import Optional, Dict, Any
 from functools import wraps
 
 import keyring  # type: ignore
 import keyring.errors  # type: ignore
+import json
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from urllib.parse import urlparse, urlencode, parse_qs
 from dotenv import load_dotenv
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('runit.account')
 
-BASE_API = f"{os.getenv('RUNIT_API_ENDPOINT')}/"
-PROJECTS_API = BASE_API + 'projects/'
 RUNIT_HOMEDIR = os.path.dirname(os.path.realpath(__file__))
 BASE_HEADERS = {'Content-Type': 'application/json'}
 KEYRING_SERVICE = "runit-cli"
@@ -27,6 +30,24 @@ MAX_RETRIES = 3
 RETRY_BACKOFF_FACTOR = 0.5
 RETRY_STATUS_CODES = [429, 500, 502, 503, 504]
 REQUEST_TIMEOUT = 30
+
+
+def get_base_api() -> str:
+    """Get validated API base URL from environment."""
+    endpoint = os.getenv('RUNIT_API_ENDPOINT')
+    if not endpoint:
+        raise RuntimeError(
+            "RUNIT_API_ENDPOINT is not set. Run `runit setup --api http://<host>/api/v1` first."
+        )
+
+    endpoint = endpoint.strip().rstrip('/')
+    parsed = urlparse(endpoint)
+    if not parsed.scheme or not parsed.netloc:
+        raise RuntimeError(
+            f"Invalid RUNIT_API_ENDPOINT: '{endpoint}'. Expected full URL like http://localhost:9000/api/v1"
+        )
+
+    return endpoint + '/'
 
 
 def create_session_with_retry() -> requests.Session:
@@ -134,6 +155,106 @@ class Account():
         return headers
 
     @staticmethod
+    def _get_base_web() -> str:
+        """Derive base web URL from configured API URL."""
+        api_url = get_base_api().rstrip("/")
+        parsed = urlparse(api_url)
+        path = parsed.path.rstrip("/")
+
+        if path.endswith("/api/v1"):
+            path = path[: -len("/api/v1")]
+        elif "/api/" in path:
+            path = path.split("/api/", maxsplit=1)[0]
+
+        web_url = parsed._replace(path=path or "", params="", query="", fragment="").geturl().rstrip("/")
+        if not web_url:
+            raise RuntimeError("Unable to derive web URL from RUNIT_API_ENDPOINT")
+        return web_url
+
+    @staticmethod
+    def auth(args):
+        """
+        Authenticate in browser and receive token via local callback server.
+        """
+        try:
+            direct_token = getattr(args, 'token', None)
+            if direct_token:
+                load_token(str(direct_token).strip())
+                print('[Success] Token stored successfully')
+                return
+
+            web_base = Account._get_base_web()
+            callback_state: Dict[str, Optional[str]] = {"access_token": None, "error": None}
+            callback_complete = threading.Event()
+
+            class CallbackHandler(BaseHTTPRequestHandler):
+                def log_message(self, format, *args):
+                    return
+
+                def do_GET(self):
+                    parsed_path = urlparse(self.path)
+                    if parsed_path.path != '/callback':
+                        self.send_response(404)
+                        self.end_headers()
+                        self.wfile.write(b'Not Found')
+                        return
+
+                    params = parse_qs(parsed_path.query)
+                    access_token = params.get('access_token', [None])[0]
+
+                    if access_token:
+                        callback_state["access_token"] = access_token
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        self.wfile.write(
+                            b"<html><body><h3>Authentication complete.</h3>"
+                            b"<p>You can close this window and return to your terminal.</p></body></html>"
+                        )
+                    else:
+                        callback_state["error"] = "Missing access token in callback response"
+                        self.send_response(400)
+                        self.send_header('Content-Type', 'text/html; charset=utf-8')
+                        self.end_headers()
+                        self.wfile.write(
+                            b"<html><body><h3>Authentication failed.</h3>"
+                            b"<p>Access token was not received.</p></body></html>"
+                        )
+                    callback_complete.set()
+
+            callback_server = ThreadingHTTPServer(('127.0.0.1', 0), CallbackHandler)
+            callback_port = callback_server.server_address[1]
+            callback_thread = threading.Thread(target=callback_server.serve_forever, daemon=True)
+            callback_thread.start()
+
+            redirect_uri = f"http://127.0.0.1:{callback_port}/callback"
+            auth_url = f"{web_base}/auth/cli?{urlencode({'redirect_uri': redirect_uri})}"
+
+            print("[Info] Waiting for browser authentication...")
+            print(f"[Info] If browser does not open, visit: {auth_url}")
+
+            if not getattr(args, 'no_open', False):
+                webbrowser.open(auth_url)
+
+            completed = callback_complete.wait(timeout=300)
+            callback_server.shutdown()
+            callback_server.server_close()
+            callback_thread.join(timeout=2)
+
+            if not completed:
+                print('[Error] Authentication timed out after 5 minutes')
+                return
+
+            if callback_state["access_token"]:
+                load_token(callback_state["access_token"])
+                print('[Success] Logged in successfully')
+                return
+
+            print(f"[Error] {callback_state['error'] or 'Authentication failed'}")
+        except Exception as e:
+            print(str(e))
+
+    @staticmethod
     def register(args):
         '''
         Static Method for account registration
@@ -142,7 +263,43 @@ class Account():
         @return None
         '''
         try:
-            pass
+            name = args.name
+            email = args.email
+            password = args.password
+            cpassword = getattr(args, 'cpassword', None)
+
+            while not name:
+                name = str(input('Full Name: '))
+            while not email:
+                email = str(input('Email Address: '))
+            while not password:
+                password = getpass()
+            while not cpassword:
+                cpassword = getpass('Confirm Password: ')
+
+            if password != cpassword:
+                print('[Error] Passwords do not match')
+                return
+
+            data = {
+                "name": name,
+                "email": email,
+                "password": password,
+                "cpassword": cpassword
+            }
+            url = get_base_api() + 'register'
+
+            session = get_http_session()
+            response = session.post(url, json=data, timeout=REQUEST_TIMEOUT)
+            result = response.json()
+
+            if 'access_token' in result.keys():
+                load_token(result['access_token'])
+                print('[Success] Registration successful')
+            elif 'detail' in result.keys():
+                print('[Error]', result['detail'])
+            else:
+                print('[Error]', result.get('message', 'Unknown error'))
         except Exception as e:
             print(str(e))
 
@@ -165,7 +322,7 @@ class Account():
                 password = getpass()
 
             data = {"email": email, "password": password}
-            url = BASE_API + 'login'
+            url = get_base_api() + 'login'
 
             session = get_http_session()
             response = session.post(url, json=data, timeout=REQUEST_TIMEOUT)
@@ -205,7 +362,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'account/'
+            url = get_base_api() + 'account/'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
             result = response.json()
@@ -229,7 +386,7 @@ class Account():
         @return dict Account information
         '''
         try:
-            url = BASE_API + 'account/'
+            url = get_base_api() + 'account/'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
             result = response.json()
@@ -251,7 +408,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'account/'
+            url = get_base_api() + 'account/'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
             result = response.json()
@@ -281,7 +438,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'projects/'
+            url = get_base_api() + 'projects/'
 
             if args.id:
                 url += f'{args.id}'
@@ -319,7 +476,7 @@ class Account():
         @return requests response
         '''
         try:
-            url = PROJECTS_API + 'publish'
+            url = get_base_api() + 'projects/publish'
             session = get_http_session()
             
             headers = Account._get_headers()
@@ -332,7 +489,14 @@ class Account():
                 headers=headers,
                 timeout=REQUEST_TIMEOUT * 2
             )
-            result = response.json()
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                message = response.text.strip() if response.text else "Empty response from server"
+                return {
+                    "status": "error",
+                    "message": f"Publish request failed with HTTP {response.status_code}: {message[:300]}"
+                }
             
             return result
 
@@ -350,7 +514,7 @@ class Account():
         @return requests response
         '''
         try:
-            url = BASE_API + f'projects/clone/{project}'
+            url = get_base_api() + f'projects/clone/{project}'
             session = get_http_session()
             response = session.get(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT * 2)
 
@@ -387,7 +551,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + f'projects/{args.id}'
+            url = get_base_api() + f'projects/{args.id}'
 
             data = {}
             raw = args.data
@@ -416,7 +580,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + f'projects/{args.id}'
+            url = get_base_api() + f'projects/{args.id}'
 
             session = get_http_session()
             response = session.delete(url, headers=Account._get_headers(), timeout=REQUEST_TIMEOUT)
@@ -435,7 +599,7 @@ class Account():
         @return None
         '''
         try:
-            url = BASE_API + 'functions'
+            url = get_base_api() + 'functions'
 
             if args.project:
                 url += f'/{args.project}'
